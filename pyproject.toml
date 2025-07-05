@@ -1,0 +1,20 @@
+[project]
+name = "limpeza-de-dados"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = "==3.12.9"
+dependencies = [
+    "folium>=0.19.5",
+    "geopy>=2.4.1",
+    "gspread>=6.2.1",
+    "gspread-dataframe>=4.0.0",
+    "leafmap>=0.45.0",
+    "pandas>=2.2.3",
+    "python-dotenv>=1.1.1",
+    "streamlit>=1.45.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
