@@ -35,7 +35,7 @@ def get_drive_info(run_in_streamlit: bool=RUN_IN_STREAMLIT, scopes: list[str]= S
             'creds': service_account.Credentials.from_service_account_info(
                 service_account_info, scopes=scopes),
             'original_form_spreadsheet_url': st.secrets['original_form_spreadsheet_url'],
-            'final_form_spreadsheet_url': None,
+            'final_form_spreadsheet_url': st.secrets['final_form_spreadsheet_url'],
         }
         
 
