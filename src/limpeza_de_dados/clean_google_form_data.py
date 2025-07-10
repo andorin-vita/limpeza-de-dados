@@ -29,9 +29,8 @@ Estrutura do código:
 import pandas as pd
 from limpeza_de_dados.utils import split_coordinates
 from geopy.geocoders import Nominatim
-
-geolocator = Nominatim(user_agent="aa")
-CONVERSION = {
+GEOLOCATOR: Nominatim = Nominatim(user_agent="my-agent")
+CONVERSION: dict[str, str] = {
     'Código': 'Código',
     'Nº de registo': 'Nº de registo',
     'ID da colónia': 'ID da colónia',
@@ -62,7 +61,7 @@ def convert_column_names(df: pd.DataFrame,
     return df
 
 def add_detailed_location(df: pd.DataFrame,
-                  geolocator=geolocator):
+                  geolocator=GEOLOCATOR):
     df['Freguesia'] = None
     df['Concelho'] = None
     df['Distrito'] = None
@@ -80,6 +79,9 @@ def add_detailed_location(df: pd.DataFrame,
 def convert_datatypes(df: pd.DataFrame):
     if not df.empty:
         df["Data"] = pd.to_datetime(df["Data"], errors="coerce")
+        df['Nº ninhos ocupados'] = df['Altura (andares)'].astype('int')
+        df['Altura (andares)'] = df['Altura (andares)'].astype('int')
+
     return df
 
 def sort_df(df:pd.DataFrame,
@@ -91,11 +93,11 @@ def sort_df(df:pd.DataFrame,
 
 def add_code_col(df: pd.DataFrame, code_col: str = 'Código'):
     df[code_col] = ''
-    return df 
+    return df
 
 def add_missing_data_col(df: pd.DataFrame, missing_data_col: str = 'Dados em Falta'):
     df[missing_data_col] = False
-    return df 
+    return df
 
 
 def full_clean_data(df_raw: pd.DataFrame):
@@ -108,12 +110,3 @@ def full_clean_data(df_raw: pd.DataFrame):
     df = sort_df(df)
     
     return df
-
-if __name__ == '__main__':
-    full_clean_data()
-
-
-
-
-
-
