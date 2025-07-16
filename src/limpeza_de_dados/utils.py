@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from copy import deepcopy
 
 def save_clean_data(path: str, df: pd.DataFrame) -> None:
@@ -9,10 +10,17 @@ def split_coordinates(df: pd.DataFrame,
                       lat_col: str = 'Latitude',
                       lon_col: str = 'Longitude') -> pd.DataFrame:
     if not df.empty:
-        df[[lat_col, lon_col]] = df[original_col].str.split(',',expand=True)
-        # Convert the latitude and longitude columns to float
-        df[lat_col] = df[lat_col].astype(float)
-        df[lon_col] = df[lon_col].astype(float)
+        latitudes = []
+        longitudes = []
+        for _, row in df.iterrows():
+            try:
+                lat, lon = row[original_col].split(',')
+            except Exception:
+                lat, lon = (np.nan, np.nan)
+            latitudes.append(lat)
+            longitudes.append(lon)
+        df[lat_col] = pd.to_numeric(latitudes, errors='coerce')
+        df[lon_col] = pd.to_numeric(longitudes, errors='coerce')
     return df
 
 def assign_nest_id(df: pd.DataFrame,

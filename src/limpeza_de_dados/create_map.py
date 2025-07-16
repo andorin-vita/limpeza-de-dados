@@ -15,6 +15,7 @@
 import streamlit as st
 import pandas as pd
 import pydeck as pdk
+import numpy as np
 
 # ---- LOAD AND PREP DATA ----
 def _dummy_callable():
@@ -37,15 +38,19 @@ def create_full_map(selected_row: pd.Series,
 
     df['color'] = df['Grupo'].apply(color_selector)
     df = df.dropna(subset=[lat_col, lon_col])
-
+    zoom=17
 
     selected_lat, selected_lon = selected_row[lat_col], selected_row[lon_col]
+    if np.isnan(selected_lat) or np.isnan(selected_lon):
+        selected_lat = 39.69484
+        selected_lon = -8.13031
+        zoom=5
 
     # ---- SET VIEW STATE ----
     view_state = pdk.ViewState(
         latitude=selected_lat,
         longitude=selected_lon,
-        zoom=17,      # High zoom for detail!
+        zoom=zoom,      # High zoom for detail!
         pitch=0,
     )
 

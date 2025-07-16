@@ -85,10 +85,15 @@ def main(lat_col: str = 'Latitude',
 
     if 'new_colony_id' not in st.session_state:
         st.session_state['new_colony_id'] = st.session_state['submission_id']
+    
+    if 'timestamp' not in st.session_state:
+        st.session_state['timestamp'] = None
 
-    selected_row[lat_col] = st.session_state['new_lat']
-    selected_row[lon_col] = st.session_state['new_lon']
-    selected_row[coords_col] = f'{st.session_state['new_lat']}, {st.session_state['new_lon']}'
+    if st.session_state['timestamp'] == selected_row[n_timestamp_col]:
+        selected_row[lat_col] = st.session_state['new_lat']
+        selected_row[lon_col] = st.session_state['new_lon']
+        selected_row[coords_col] = f'{st.session_state['new_lat']}, {st.session_state['new_lon']}'
+    
     selected_row[id_col] = st.session_state['submission_id']
     selected_row[colony_id_col] = st.session_state['new_colony_id']
 
@@ -137,7 +142,7 @@ def main(lat_col: str = 'Latitude',
                     st.session_state['new_lat'] = st.session_state['map_selected_point'][lat_col]
                     st.session_state['new_lon'] = st.session_state['map_selected_point'][lon_col]
                     st.session_state['new_colony_id'] = int(st.session_state['map_selected_point'][colony_id_col])
-
+                    st.session_state['timestamp'] = selected_row[n_timestamp_col]
 
         col3, col4 = st.columns(2, gap='small')
         with col3:
