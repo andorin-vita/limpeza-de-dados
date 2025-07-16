@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 RUN_IN_STREAMLIT: bool = True
 SCOPES = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets']
 
-
 def get_drive_info(run_in_streamlit: bool=RUN_IN_STREAMLIT, scopes: list[str]= SCOPES):
     if run_in_streamlit:
         service_account_info = {
@@ -58,10 +57,9 @@ def read_spreadsheet_as_df(url: str, gc: gspread.client.Client) -> pd.DataFrame:
 def append_row_to_spreadsheet(url: str, gc: gspread.client.Client, row_to_append: list):
     sh: gspread.spreadsheet.Spreadsheet = gc.open_by_url(url)
     wh: gspread.worksheet.Worksheet = sh.sheet1
-    wh.append_row(row_to_append)
+    wh.append_row(row_to_append, value_input_option='USER_ENTERED')
 
 def write_df_as_spreadsheet(df:pd.DataFrame, url: str, gc: gspread.client.Client):
     sh: gspread.spreadsheet.Spreadsheet = gc.open_by_url(url)
     wh: gspread.worksheet.Worksheet = sh.sheet1
     set_with_dataframe(wh, df)
-

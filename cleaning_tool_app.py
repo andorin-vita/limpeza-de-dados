@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
+import gspread
 
 from limpeza_de_dados.create_sidebar import (
     get_submission_to_validate, create_filter_options,
@@ -11,9 +11,6 @@ from limpeza_de_dados.create_map import create_full_map
 from limpeza_de_dados.create_data_flow_to_google import (
     get_drive_info, read_spreadsheet_as_df, append_row_to_spreadsheet
 )
-import gspread
-
-
 
 from limpeza_de_dados.utils import find_new_entries
 from limpeza_de_dados.clean_google_form_data import full_clean_data, CONVERSION
@@ -78,7 +75,7 @@ def main(lat_col: str = 'Latitude',
         st.session_state['filtered_df'] = df_validated
 
     if 'submission_id' not in st.session_state:
-        st.session_state['submission_id'] = max(df_validated[id_col]) + 1
+        st.session_state['submission_id'] = int(max(df_validated[id_col]) + 1)
 
     if 'new_lat' not in st.session_state:
         st.session_state['new_lat'] = selected_row[lat_col]
@@ -88,12 +85,15 @@ def main(lat_col: str = 'Latitude',
 
     if 'new_colony_id' not in st.session_state:
         st.session_state['new_colony_id'] = st.session_state['submission_id']
+    
+    if 'timestamp' not in st.session_state:
+        st.session_state['timestamp'] = None
 
-
-
-    selected_row[lat_col] = st.session_state['new_lat']
-    selected_row[lon_col] = st.session_state['new_lon']
-    selected_row[coords_col] = f'{st.session_state['new_lat']}, {st.session_state['new_lon']}'
+    if st.session_state['timestamp'] == selected_row[n_timestamp_col]:
+        selected_row[lat_col] = st.session_state['new_lat']
+        selected_row[lon_col] = st.session_state['new_lon']
+        selected_row[coords_col] = f'{st.session_state['new_lat']}, {st.session_state['new_lon']}'
+    
     selected_row[id_col] = st.session_state['submission_id']
     selected_row[colony_id_col] = st.session_state['new_colony_id']
 
@@ -141,8 +141,8 @@ def main(lat_col: str = 'Latitude',
                 if update_coords_button:
                     st.session_state['new_lat'] = st.session_state['map_selected_point'][lat_col]
                     st.session_state['new_lon'] = st.session_state['map_selected_point'][lon_col]
-                    st.session_state['new_colony_id'] = st.session_state['map_selected_point'][colony_id_col]
-
+                    st.session_state['new_colony_id'] = int(st.session_state['map_selected_point'][colony_id_col])
+                    st.session_state['timestamp'] = selected_row[n_timestamp_col]
 
         col3, col4 = st.columns(2, gap='small')
         with col3:
@@ -158,6 +158,7 @@ def main(lat_col: str = 'Latitude',
 
         if submit_button:
             data_to_save: list = st.session_state['edited_submission'].iloc[:, 0].tolist()
+            data_to_save = [str(item).replace('.', ',') for item in data_to_save]
             append_row_to_spreadsheet(url=DRIVE_INFO['final_form_spreadsheet_url'], 
                                       gc= GC, 
                                       row_to_append=data_to_save)
