@@ -81,7 +81,7 @@ def load_data(url: str = DRIVE_INFO['final_form_spreadsheet_url'],
     df = df[cols_to_use]
     df = df.dropna(subset=[lat_col, lon_col])
     df = df.sort_values(by=[colony_id_col, date_col], ascending=True)
-    df = df.drop_duplicates(subset=[colony_id_col])
+    df = df.drop_duplicates(subset=[colony_id_col], keep='last')
     df[n_nests_col] = df[n_nests_col].astype(pd.Int64Dtype(), errors='ignore')
     df[height_col] = df[height_col].astype(pd.Int64Dtype(), errors='ignore')
     df[colony_id_col] = df[colony_id_col].astype(pd.Int64Dtype(), errors='ignore')
