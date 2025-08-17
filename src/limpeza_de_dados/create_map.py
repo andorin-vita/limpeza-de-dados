@@ -24,6 +24,7 @@ def _dummy_callable():
 def color_selector(grupo, name_group: str = 'Não validada'):
     return [0, 128, 255, 180] if grupo == name_group else [255, 0, 80, 180]
 
+
 def create_full_map(selected_row: pd.Series,
                df_validated: pd.DataFrame,
                lat_col: str = 'Latitude',
@@ -32,7 +33,6 @@ def create_full_map(selected_row: pd.Series,
     selected_row['Grupo'] = 'Não validada'
     df_validated['Grupo'] = 'Validada'
 
-    #st.write(type(df_validated[lat_col][0]), type(df_validated[lon_col][0]))
     df = pd.concat([df_validated, selected_row.to_frame().T], ignore_index=True)
     df[code_col] = df[code_col].fillna('Sem Código')
 
@@ -67,21 +67,11 @@ def create_full_map(selected_row: pd.Series,
         radius_max_pixels=15,
     )
 
-    tooltip = {
-        "html": "<b>Elevation Value:</b> {lat_col} <br/> <b>Color Value:</b> {lon_col}",
-        "style": {
-            "backgroundColor": "steelblue",
-            "color": "white"
-        }
-    }
-
-
     st.write('Selecciona um ponto para ver a localização')
     e = st.pydeck_chart(
         pdk.Deck(
             layers=[layer],
             initial_view_state=view_state,
-           # tooltip=tooltip,
             map_style='light',
         ), height = 500, on_select=_dummy_callable
     )
@@ -89,16 +79,9 @@ def create_full_map(selected_row: pd.Series,
         selected_point = e.selection['objects'][code_col][0]
         url= f"https://www.google.com/maps/@?api=1&map_action=pano&viewpoint={selected_point[lat_col]},{selected_point[lon_col]}"
 
-        #st.markdown(f"**Google Street View para {selected_point[code_col]}**: [Abrir Street View]({url})")
         st.markdown(f"**{selected_point[code_col]}**: [Abrir Street View]({url})")
         return selected_point
 
     else:
         return None
         
-        # st.write(url)
-
-    # ---- STREET VIEW LINK ----
-   # gsv_url = f"https://www.google.com/maps/@?api=1&map_action=pano&viewpoint={selected_lat},{selected_lon}"
-   # st.markdown(f"**Google Street View para {selected_row[code_col]}**: [Abrir Street View]({gsv_url})")
-

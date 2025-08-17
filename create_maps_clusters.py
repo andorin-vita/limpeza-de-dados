@@ -4,10 +4,6 @@ import streamlit as st
 from copy import deepcopy
 import gspread
 import yaml
-import pydeck as pdk
-import matplotlib.cm as cm
-import matplotlib.colors as mcolors
-import numpy as np
 
 
 from limpeza_de_dados.create_data_flow_to_google import (
@@ -20,11 +16,6 @@ Pode visualizar todos os registos de andorinhas e andorinhões da Andorin até a
 
 **Obrigado pelo seu contributo!**
 """
-
-MIN_RADIUS_PIXELS: int = 2
-MAX_RADIUS_PIXELS: int = 10
-ZOOM_RADIUS_PIXELS: int = 500
-
 
 DRIVE_INFO: dict[str, str] = get_drive_info()
 GC: gspread.client.Client = gspread.authorize(DRIVE_INFO['creds'])
@@ -50,8 +41,6 @@ REGIONS_YML: dict[str, str] = {
     'Freguesia': 'yamls/freguesias.yml',
 }
 
-
-
 def load_yaml_data(yaml_path: str):
     with open(yaml_path, 'r') as file:
         content: list[str] = yaml.safe_load(file)
@@ -65,15 +54,6 @@ def get_region_options(yaml_path: str, df: pd.DataFrame, col: str) -> list[str]:
     from_df: list[str] = df[col].dropna().unique()
 
     return sorted(list(set(from_df) | set(from_yaml)), key=str.casefold)
-
-def create_cmap(df: pd.DataFrame,
-                color_col: str):
-    unique_species = df[color_col].unique()
-    colors = cm.tab20(np.linspace(0, 1, len(unique_species)))
-    colors = (colors[:, :3] * 255).round().astype(int).tolist()  # RGBA -> RGB, as list
-
-    color_map = {species: color for species, color in zip(unique_species, colors)}
-    return color_map
 
 @st.cache_data
 def load_all_region_options(df: pd.DataFrame, col_yaml: dict[str, str]=REGIONS_YML)->dict[str, str]:
@@ -96,9 +76,7 @@ def load_data(url: str = DRIVE_INFO['final_form_spreadsheet_url'],
               height_col: str = 'Altura (andares)',
               date_col: str = 'Data',
               colony_id_col: str = 'ID da colónia',
-              cols_to_use: list[str] = COLS_TO_USE,
-              species_col: str = 'Espécie',
-              remove_if_not_identified: bool = True
+              cols_to_use: list[str] = COLS_TO_USE
               ):
     df = read_spreadsheet_as_df(url=url, gc=gc)
     df = df[cols_to_use]
@@ -110,64 +88,34 @@ def load_data(url: str = DRIVE_INFO['final_form_spreadsheet_url'],
     df[colony_id_col] = df[colony_id_col].astype(pd.Int64Dtype(), errors='ignore')
     df[date_col] = pd.to_datetime(df[date_col])
     df['Year'] = df[date_col].dt.year.astype(pd.Int64Dtype(), errors='ignore')
-    if remove_if_not_identified:
-        df = df[~df[species_col].str.contains('não ide', case=False, na=False)]
     return df
 
-
-def create_point_map(df: pd.DataFrame,
-                     color_map: dict[str, list[int]],
-                     lat_col: str = 'Latitude',
-                     lon_col: str = 'Longitude',
-                     color_col: str = 'color',
-                     center_lat: float = 39.69484,
-                     center_lon: float = -8.13031,
-                     zoom: int = 6
-                    ):
-
-    # ---- SET VIEW STATE ----
-    view_state = pdk.ViewState(
-        latitude=center_lat,
-        longitude=center_lon,
-        zoom=zoom,      
-        pitch=0,
+def create_cluster_map(df: pd.DataFrame,
+                       lat_col: str = 'Latitude',
+                       lon_col: str = 'Longitude',
+                       ):
+    m = leafmap.Map(location=[38.736946, -9.142685],
+                    zoom=6,
+                    draw_control=False,
+                    measure_control=False,
+                    fullscreen_control=False,
+                    attribution_control=False
+                    )
+    
+    m.add_points_from_xy(
+        df,
+        x=lon_col,
+        y=lat_col,
+        color_column='Espécie',
+        layer_name="Points",
+        icon_names=["square"],
+        spin=False,
+        add_legend=True,
+        max_cluster_radius=st.session_state['cluster_radius']
     )
+    streamlit_map = m.to_streamlit(height=600, width=1200)
+    return streamlit_map
 
-    # ---- DECK LAYER ----
-    scatter_layer = pdk.Layer(
-        "ScatterplotLayer",
-        data=df,
-        get_position='[{}, {}]'.format(lon_col, lat_col),
-        get_fill_color=color_col,
-        get_radius=ZOOM_RADIUS_PIXELS,
-        pickable=True,
-        radius_min_pixels=MIN_RADIUS_PIXELS,
-        radius_max_pixels=MAX_RADIUS_PIXELS,
-    )
-
-    # Render the map and legend side by side
-    col1, col2 = st.columns([4, 1])
-    with col1:
-        st.pydeck_chart(
-            pdk.Deck(
-                layers=[scatter_layer],
-                initial_view_state=view_state,
-                map_style="light",
-                tooltip={
-                    "html": "<div style='font-size:12px; line-height:1.4;'>"
-                    + "<br/>".join([f"{col}: {{{col}}}" for col in df.columns if col not in [color_col, 'Data']])
-                    + "</div>"
-                },
-            ),
-    height=500,
-    use_container_width=True,
-)
-    with col2:
-        for species, color in color_map.items():
-            st.markdown(
-                f'<span style="color: rgb{tuple(color)}; font-size: 11px;">■ {species}</span>',
-                unsafe_allow_html=True
-            )
 
 def create_map_sidebar(df: pd.DataFrame,
                        region_options: dict[str, str],
@@ -226,6 +174,13 @@ def create_map_sidebar(df: pd.DataFrame,
                 value=(int(year[0]), int(year[-1])),
             )
 
+            cluster_radius: int = st.slider(
+                label="Raio",
+                min_value=1,
+                max_value=200,
+                value=25,
+            )
+
             submit_button: bool = st.form_submit_button("Submit", type="primary")
 
             if submit_button:
@@ -258,6 +213,9 @@ def create_map_sidebar(df: pd.DataFrame,
                 if years_selected:
                     filtered_df = filtered_df[filtered_df['Year'].isin(years_selected)]
                 
+                if cluster_radius:
+                    st.session_state['cluster_radius'] = cluster_radius
+
                 st.session_state.reload_map = True  # Set the flag to reload the map
                 return filtered_df
             else:
@@ -270,14 +228,11 @@ if __name__ == "__main__":
     # Inicializações
     if 'reload_map' not in st.session_state:
         st.session_state['reload_map'] = True
-
+    if 'cluster_radius' not in st.session_state:
+        st.session_state['cluster_radius'] = 25
 
     # Listar regiões
     region_options: dict[str, str] = load_all_region_options(df)
-
-    # Adicionar cores
-    color_map = create_cmap(df=df, color_col="Espécie")
-    df['color'] = df['Espécie'].map(color_map)
 
     # Lógica principal
     filtered_df = create_map_sidebar(df=df, region_options=region_options)
@@ -287,5 +242,5 @@ if __name__ == "__main__":
         st.warning("Nenhum ponto para mostrar no mapa!")
     else:
         st.write(DESCRIPTION_ABOVE_MAP)
-        create_point_map(df=filtered_df, color_map=color_map)
+        create_cluster_map(df=filtered_df)
         st.session_state.reload_map = False
