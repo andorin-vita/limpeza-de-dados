@@ -63,7 +63,7 @@ uv sync
 
 ### Extra: Como obter uma chave de service account
 
-Cada projecto deve ter a sua chave.
+Cada membro da equipa deve ter a sua chave.
 Assumindo que já existe um projeto no Google Cloud Console e que os scopes necessários já estão ativados:
 
 1. Fazer o login no Google com `registosandorin@gmail.com`
