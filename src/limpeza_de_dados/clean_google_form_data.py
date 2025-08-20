@@ -68,10 +68,14 @@ def add_detailed_location(df: pd.DataFrame,
 
     for index, row in df.iterrows():
         try:
-            location_raw = geolocator.reverse((row['Latitude'], row['Longitude'])).raw
-            df.loc[index, 'Freguesia'] = location_raw['address'].get('city_district')
-            df.loc[index,'Concelho'] = location_raw['address'].get('city')
-            df.loc[index,'Distrito'] = location_raw['address'].get('county')
+            freguesia_keys = ['city_district', 'village', 'suburb']
+            concelho_keys = ['city', 'town', 'municipality']
+            distrito_keys = ['county', 'state', 'region']
+
+            address = geolocator.reverse((row['Latitude'], row['Longitude'])).raw['address']
+            df.loc[index, 'Freguesia'] = next((address[key] for key in freguesia_keys if key in address), None)
+            df.loc[index, 'Concelho']  = next((address[key] for key in concelho_keys  if key in address), None)
+            df.loc[index, 'Distrito']  = next((address[key] for key in distrito_keys  if key in address), None)
         except:
             pass
     return df
