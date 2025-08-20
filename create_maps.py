@@ -186,7 +186,6 @@ def create_point_map(df: pd.DataFrame,
             )
 
 def create_point_map_abs_pos(df: pd.DataFrame,
-                     color_map: dict[str, list[int]],
                      lat_col: str = 'Latitude',
                      lon_col: str = 'Longitude',
                      color_col: str = 'color',
