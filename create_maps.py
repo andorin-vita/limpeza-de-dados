@@ -364,5 +364,5 @@ if __name__ == "__main__":
         st.warning("Nenhum ponto para mostrar no mapa!")
     else:
         st.write(DESCRIPTION_ABOVE_MAP)
-        create_point_map_abs_pos(df=filtered_df, color_map=color_map)
+        create_point_map_abs_pos(df=filtered_df)
         st.session_state.reload_map = False
