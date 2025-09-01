@@ -191,9 +191,7 @@ def create_map_sidebar(df: pd.DataFrame,
                         (filtered_df[n_nests_col] <= n_nests_selected[1])
                     ]
                 if structure_selected:
-                    filtered_df = filtered_df[
-                        set(filtered_df[nest_structure_col]) & set(structure_selected) != set()
-                    ]
+                    filtered_df = filtered_df[nest_structure_col].isin(structure_selected)
                 if districts_selected:
                     filtered_df = filtered_df[
                         filtered_df[districts_col].isin(districts_selected)
