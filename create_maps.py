@@ -1,4 +1,3 @@
-import leafmap.foliumap as leafmap
 import pandas as pd
 import streamlit as st
 from copy import deepcopy
@@ -6,33 +5,28 @@ import gspread
 import yaml
 import pydeck as pdk
 import matplotlib.cm as cm
-import matplotlib.colors as mcolors
 import numpy as np
+from unidecode import unidecode
 
 
 from limpeza_de_dados.create_data_flow_to_google import (
     read_spreadsheet_as_df, get_drive_info)
 
-
-DESCRIPTION_ABOVE_MAP: str = """ ### Registos de ninhos de andorinhas e andorinhões em Portugal
-
-Pode visualizar todos os registos de andorinhas e andorinhões da Andorin até ao momento
-
-**Obrigado pelo seu contributo!**
-"""
+DESCRIPTION_ABOVE_MAP: str = """"""
 
 MIN_RADIUS_PIXELS: int = 2
 MAX_RADIUS_PIXELS: int = 10
 ZOOM_RADIUS_PIXELS: int = 500
+HEIGHT: int = 600
+WIDTH: int = 900
+VERTICAL_LEGEND: int = 190
+HORIZONTAL_LEGEND: int =650
 
-
-DRIVE_INFO: dict[str, str] = get_drive_info()
-GC: gspread.client.Client = gspread.authorize(DRIVE_INFO['creds'])
-
+# Campos para os filtros e/ou mapa
 COLS_TO_USE: list[str] = ['Espécie',
                           'ID da colónia',
-                           'Latitude',
-                           'Longitude',
+                          'Latitude',
+                          'Longitude',
                            'Distrito',
                            'Concelho',
                            'Freguesia',
@@ -44,13 +38,30 @@ COLS_TO_USE: list[str] = ['Espécie',
                            'Data'
 ]
 
+# Campos para tooltip
+COLS_TOOLTIP: list[str] = ['Espécie',
+                          'ID da colónia',
+                          'Coordenadas',
+                           'Distrito',
+                           'Concelho',
+                           'Freguesia',
+                           'Estrutura de nidificação',
+                           'Nº ninhos ocupados',
+                           'Altura (andares)',
+                           'Estado da estrutura',
+                           'Local de nidificação',
+]
+
+# Não mexer
+DRIVE_INFO: dict[str, str] = get_drive_info()
+GC: gspread.client.Client = gspread.authorize(DRIVE_INFO['creds'])
+
+# Não mexer
 REGIONS_YML: dict[str, str] = {
     'Distrito': 'yamls/distritos.yml',
     'Concelho': 'yamls/concelhos.yml',
     'Freguesia': 'yamls/freguesias.yml',
 }
-
-
 
 def load_yaml_data(yaml_path: str):
     with open(yaml_path, 'r') as file:
@@ -64,13 +75,17 @@ def get_region_options(yaml_path: str, df: pd.DataFrame, col: str) -> list[str]:
     from_yaml: list[str] = load_yaml_data(yaml_path)
     from_df: list[str] = df[col].dropna().unique()
 
-    return sorted(list(set(from_df) | set(from_yaml)), key=str.casefold)
+    return sorted(list(set(from_df) | set(from_yaml)), key=unidecode)
 
 def create_cmap(df: pd.DataFrame,
                 color_col: str):
     unique_species = df[color_col].unique()
     colors = cm.tab20(np.linspace(0, 1, len(unique_species)))
-    colors = (colors[:, :3] * 255).round().astype(int).tolist()  # RGBA -> RGB, as list
+    colors = (colors[:, :3] * 255).round().astype(int).tolist()
+
+    # para fazez color map manual (comentar a linha abaixo)
+    #color_map = {'Andorinha-dos-beirais': [148,1,1], 
+    # 'Andorinha-das-chaminés': [148,1,1]}
 
     color_map = {species: color for species, color in zip(unique_species, colors)}
     return color_map
@@ -111,7 +126,7 @@ def load_data(url: str = DRIVE_INFO['final_form_spreadsheet_url'],
     df[date_col] = pd.to_datetime(df[date_col])
     df['Year'] = df[date_col].dt.year.astype(pd.Int64Dtype(), errors='ignore')
     if remove_if_not_identified:
-        df = df[~df[species_col].str.contains('não ide', case=False, na=False)]
+        df = df[~df[species_col].str.contains('não ide', case=False, na=True)]
     return df
 
 
@@ -155,12 +170,13 @@ def create_point_map(df: pd.DataFrame,
                 map_style="light",
                 tooltip={
                     "html": "<div style='font-size:12px; line-height:1.4;'>"
-                    + "<br/>".join([f"{col}: {{{col}}}" for col in df.columns if col not in [color_col, 'Data']])
+                    + "<br/>".join([f"{col}: {{{col}}}" for col in COLS_TOOLTIP if col not in [color_col, 'Data']])
                     + "</div>"
                 },
             ),
-    height=500,
-    use_container_width=True,
+    height=HEIGHT,
+    width=WIDTH,
+    use_container_width=False,
 )
     with col2:
         for species, color in color_map.items():
@@ -168,6 +184,69 @@ def create_point_map(df: pd.DataFrame,
                 f'<span style="color: rgb{tuple(color)}; font-size: 11px;">■ {species}</span>',
                 unsafe_allow_html=True
             )
+
+def create_point_map_abs_pos(df: pd.DataFrame,
+                     lat_col: str = 'Latitude',
+                     lon_col: str = 'Longitude',
+                     color_col: str = 'color',
+                     legend_col: str= 'Espécie',
+                     center_lat: float = 39.69484,
+                     center_lon: float = -8.13031,
+                     zoom: int = 6
+                    ):
+
+    # ---- SET VIEW STATE ----
+    view_state = pdk.ViewState(
+        latitude=center_lat,
+        longitude=center_lon,
+        zoom=zoom,      
+        pitch=0,
+    )
+
+    # ---- DECK LAYER ----
+    scatter_layer = pdk.Layer(
+        "ScatterplotLayer",
+        data=df,
+        get_position='[{}, {}]'.format(lon_col, lat_col),
+        get_fill_color=color_col,
+        get_radius=ZOOM_RADIUS_PIXELS,
+        pickable=True,
+        radius_min_pixels=MIN_RADIUS_PIXELS,
+        radius_max_pixels=MAX_RADIUS_PIXELS,
+    )
+
+    df_colors: pd.DataFrame = df.drop_duplicates(legend_col)
+    # Build HTML for overlay legend
+    legend_html = f"""<div style='position:absolute; top:{VERTICAL_LEGEND}px; 
+    left:{HORIZONTAL_LEGEND}px; background:white; 
+    padding:8px; z-index:999; border-radius:4px; box-shadow:0 2px 6px rgba(0,0,0,0.2);'>"""
+    for _, row in df_colors.iterrows():
+        color_str = f"rgb({row[color_col][0]},{row[color_col][1]},{row[color_col][2]})"
+        legend_html += f"<div style='display:flex; align-items:center; gap:6px; margin-bottom:2px;'>"
+        legend_html += f"<div style='width:16px; height:16px; background:{color_str};'></div>"
+        legend_html += f"<span>{row[legend_col]}</span></div>"
+    legend_html += "</div>"
+
+    # Use st.markdown with unsafe_allow_html to float the legend
+    st.markdown(legend_html, unsafe_allow_html=True)
+
+    # Render the map and legend side by side
+    st.pydeck_chart(
+        pdk.Deck(
+            layers=[scatter_layer],
+            initial_view_state=view_state,
+            map_style="light",
+            tooltip={
+                "html": "<div style='font-size:12px; line-height:1.4;'>"
+                + "<br/>".join([f"{col}: {{{col}}}" for col in COLS_TOOLTIP if col not in [color_col, 'Data']])
+                + "</div>"
+            },
+        ),
+    height=HEIGHT,
+    width=WIDTH,
+    use_container_width=False,
+    )
+
 
 def create_map_sidebar(df: pd.DataFrame,
                        region_options: dict[str, str],
@@ -178,11 +257,10 @@ def create_map_sidebar(df: pd.DataFrame,
                        concelho_col: str = 'Concelho',
                        freguesia_col: str = 'Freguesia',
                        year_col: str = 'Year'):
-
     with st.sidebar:
         with st.form("my_form"):
-            species: list[str] = sorted(df[species_col].dropna().unique(), key=str.casefold)
-            nest_structure: list[str] = sorted(df[nest_structure_col].dropna().unique(), key=str.casefold)
+            species: list[str] = sorted(df[species_col].dropna().unique(), key=unidecode)
+            nest_structure: list[str] = sorted(df[nest_structure_col].dropna().unique(), key=unidecode)
             districts: list[str] = region_options[districts_col]
             n_nests: list[str] = sorted(df[n_nests_col].dropna().unique())
             concelho: list[str] = region_options[concelho_col]
@@ -236,9 +314,7 @@ def create_map_sidebar(df: pd.DataFrame,
                         (filtered_df[n_nests_col] <= n_nests_selected[1])
                     ]
                 if structure_selected:
-                    filtered_df = filtered_df[
-                        set(filtered_df[nest_structure_col]) & set(structure_selected) != set()
-                    ]
+                    filtered_df = filtered_df[nest_structure_col].isin(structure_selected)
                 if districts_selected:
                     filtered_df = filtered_df[
                         filtered_df[districts_col].isin(districts_selected)
@@ -264,13 +340,14 @@ def create_map_sidebar(df: pd.DataFrame,
                 return df
 
 if __name__ == "__main__":
+    st.set_page_config(layout="wide")
+
     # === Indica aqui o caminho do teu ficheiro CSV ===
     df: pd.DataFrame = load_data()
 
     # Inicializações
     if 'reload_map' not in st.session_state:
         st.session_state['reload_map'] = True
-
 
     # Listar regiões
     region_options: dict[str, str] = load_all_region_options(df)
@@ -287,5 +364,5 @@ if __name__ == "__main__":
         st.warning("Nenhum ponto para mostrar no mapa!")
     else:
         st.write(DESCRIPTION_ABOVE_MAP)
-        create_point_map(df=filtered_df, color_map=color_map)
+        create_point_map_abs_pos(df=filtered_df)
         st.session_state.reload_map = False
