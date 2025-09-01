@@ -12,6 +12,7 @@ from unidecode import unidecode
 from limpeza_de_dados.create_data_flow_to_google import (
     read_spreadsheet_as_df, get_drive_info)
 
+
 DESCRIPTION_ABOVE_MAP: str = """"""
 
 MIN_RADIUS_PIXELS: int = 2
@@ -19,7 +20,7 @@ MAX_RADIUS_PIXELS: int = 10
 ZOOM_RADIUS_PIXELS: int = 500
 HEIGHT: int = 600
 WIDTH: int = 900
-VERTICAL_LEGEND: int = 190
+VERTICAL_LEGEND: int = 350
 HORIZONTAL_LEGEND: int =650
 
 # Campos para os filtros e/ou mapa
@@ -41,7 +42,6 @@ COLS_TO_USE: list[str] = ['Espécie',
 # Campos para tooltip
 COLS_TOOLTIP: list[str] = ['Espécie',
                           'ID da colónia',
-                          'Coordenadas',
                            'Distrito',
                            'Concelho',
                            'Freguesia',
@@ -78,7 +78,7 @@ def get_region_options(yaml_path: str, df: pd.DataFrame, col: str) -> list[str]:
     return sorted(list(set(from_df) | set(from_yaml)), key=unidecode)
 
 def create_cmap(df: pd.DataFrame,
-                color_col: str):
+                           color_col: str):
     unique_species = df[color_col].unique()
     colors = cm.tab20(np.linspace(0, 1, len(unique_species)))
     colors = (colors[:, :3] * 255).round().astype(int).tolist()
@@ -89,6 +89,23 @@ def create_cmap(df: pd.DataFrame,
 
     color_map = {species: color for species, color in zip(unique_species, colors)}
     return color_map
+
+def create_cmap_manual():
+    return {
+    "Andorinhão-pálido":   {"emoji": "🟥", "rgb": (244, 67, 54)},
+    "Andorinha-das-barreiras": {"emoji": "🟧", "rgb": (255, 152, 0)},
+    "Andorinhão-preto": {"emoji": "🟨", "rgb": (255, 204, 50)},
+    "Andorinha-dáurica": {"emoji": "🟩", "rgb": (124, 179, 66)},
+    "Andorinhão-cafre": {"emoji": "🟦", "rgb": (25, 118, 210)},
+    "Andorinha-dos-beirais": {"emoji": "🟪", "rgb": (171, 71, 188)},
+    "Andorinhão-real": {"emoji": "🟫", "rgb": (183, 109, 84)},
+    "Andorinha-das-chaminés": {"emoji": "⬛", "rgb": (66, 66, 66)},
+    "Andorinha-das-rochas": {"emoji": "⬜", "rgb": (225, 225, 225)},
+    "Andorinhão-da-serra": {"emoji": "🏻", "rgb": (250, 220, 184)},  
+    # Adicionar abaixo a nova espécie de andorinha
+    #"Andorinha-xxx": {"emoji": "🏽", "rgb": (179, 136, 102)}
+    }
+
 
 @st.cache_data
 def load_all_region_options(df: pd.DataFrame, col_yaml: dict[str, str]=REGIONS_YML)->dict[str, str]:
@@ -129,63 +146,7 @@ def load_data(url: str = DRIVE_INFO['final_form_spreadsheet_url'],
         df = df[~df[species_col].str.contains('não ide', case=False, na=True)]
     return df
 
-
 def create_point_map(df: pd.DataFrame,
-                     color_map: dict[str, list[int]],
-                     lat_col: str = 'Latitude',
-                     lon_col: str = 'Longitude',
-                     color_col: str = 'color',
-                     center_lat: float = 39.69484,
-                     center_lon: float = -8.13031,
-                     zoom: int = 6
-                    ):
-
-    # ---- SET VIEW STATE ----
-    view_state = pdk.ViewState(
-        latitude=center_lat,
-        longitude=center_lon,
-        zoom=zoom,      
-        pitch=0,
-    )
-
-    # ---- DECK LAYER ----
-    scatter_layer = pdk.Layer(
-        "ScatterplotLayer",
-        data=df,
-        get_position='[{}, {}]'.format(lon_col, lat_col),
-        get_fill_color=color_col,
-        get_radius=ZOOM_RADIUS_PIXELS,
-        pickable=True,
-        radius_min_pixels=MIN_RADIUS_PIXELS,
-        radius_max_pixels=MAX_RADIUS_PIXELS,
-    )
-
-    # Render the map and legend side by side
-    col1, col2 = st.columns([4, 1])
-    with col1:
-        st.pydeck_chart(
-            pdk.Deck(
-                layers=[scatter_layer],
-                initial_view_state=view_state,
-                map_style="light",
-                tooltip={
-                    "html": "<div style='font-size:12px; line-height:1.4;'>"
-                    + "<br/>".join([f"{col}: {{{col}}}" for col in COLS_TOOLTIP if col not in [color_col, 'Data']])
-                    + "</div>"
-                },
-            ),
-    height=HEIGHT,
-    width=WIDTH,
-    use_container_width=False,
-)
-    with col2:
-        for species, color in color_map.items():
-            st.markdown(
-                f'<span style="color: rgb{tuple(color)}; font-size: 11px;">■ {species}</span>',
-                unsafe_allow_html=True
-            )
-
-def create_point_map_abs_pos(df: pd.DataFrame,
                      lat_col: str = 'Latitude',
                      lon_col: str = 'Longitude',
                      color_col: str = 'color',
@@ -215,21 +176,6 @@ def create_point_map_abs_pos(df: pd.DataFrame,
         radius_max_pixels=MAX_RADIUS_PIXELS,
     )
 
-    df_colors: pd.DataFrame = df.drop_duplicates(legend_col)
-    # Build HTML for overlay legend
-    legend_html = f"""<div style='position:absolute; top:{VERTICAL_LEGEND}px; 
-    left:{HORIZONTAL_LEGEND}px; background:white; 
-    padding:8px; z-index:999; border-radius:4px; box-shadow:0 2px 6px rgba(0,0,0,0.2);'>"""
-    for _, row in df_colors.iterrows():
-        color_str = f"rgb({row[color_col][0]},{row[color_col][1]},{row[color_col][2]})"
-        legend_html += f"<div style='display:flex; align-items:center; gap:6px; margin-bottom:2px;'>"
-        legend_html += f"<div style='width:16px; height:16px; background:{color_str};'></div>"
-        legend_html += f"<span>{row[legend_col]}</span></div>"
-    legend_html += "</div>"
-
-    # Use st.markdown with unsafe_allow_html to float the legend
-    st.markdown(legend_html, unsafe_allow_html=True)
-
     # Render the map and legend side by side
     st.pydeck_chart(
         pdk.Deck(
@@ -244,12 +190,34 @@ def create_point_map_abs_pos(df: pd.DataFrame,
         ),
     height=HEIGHT,
     width=WIDTH,
-    use_container_width=False,
+    use_container_width=True,
     )
+
+def do_top_filter(df: pd.DataFrame, 
+                  species_cmap: dict[str, dict[str, str]],
+                  species_col='Espécie'):
+    
+    with st.form("my_form2", border=False):
+        fmt = {key: f"{value['emoji']} {key}" for key, value in color_map.items()}
+        species_selected: str = st.pills(label="",
+                                        options=species_cmap.keys(),
+                                        format_func=lambda x: fmt[x],
+                                        selection_mode='multi',
+                                        key='species-filter2',
+                                        default=species_cmap.keys()
+                                        )
+        
+        submit_legend = st.form_submit_button("Aplicar legenda", type='primary')
+        if submit_legend:
+            st.session_state.reload_map = True  # Set the flag to reload the map
+            return df[filtered_df[species_col].isin(species_selected)]
+        else:
+            return df
 
 
 def create_map_sidebar(df: pd.DataFrame,
                        region_options: dict[str, str],
+                       species_cmap: dict[str, dict[str, str]],
                        species_col: str = 'Espécie',
                        nest_structure_col: str = 'Estrutura de nidificação',
                        n_nests_col: str = 'Nº ninhos ocupados',
@@ -269,8 +237,13 @@ def create_map_sidebar(df: pd.DataFrame,
 
             st.title("Filtros")
 
-            species_selected: str = st.multiselect(label="Espécie",
-                                                 options=species)
+            fmt = {key: f"{value['emoji']} {key}" for key, value in species_cmap.items()}
+            species_selected: str = st.pills(label="Espécie",
+                                             options=species_cmap.keys(),
+                                             format_func=lambda x: fmt[x],
+                                             selection_mode='multi',
+                                             key='species-filter'
+                                                 )
 
             n_nests_selected: str = st.slider(
                 label="Ninhos",
@@ -341,6 +314,13 @@ def create_map_sidebar(df: pd.DataFrame,
 
 if __name__ == "__main__":
     st.set_page_config(layout="wide")
+    st.markdown("""
+    <style>
+        .st-key-species-filter button div[data-testid="stMarkdownContainer"] p {
+            font-size: 11px !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
     # === Indica aqui o caminho do teu ficheiro CSV ===
     df: pd.DataFrame = load_data()
@@ -353,16 +333,17 @@ if __name__ == "__main__":
     region_options: dict[str, str] = load_all_region_options(df)
 
     # Adicionar cores
-    color_map = create_cmap(df=df, color_col="Espécie")
-    df['color'] = df['Espécie'].map(color_map)
+    color_map = create_cmap_manual()
+    df['color'] = [color_map[key]["rgb"] for key in df['Espécie']]
 
     # Lógica principal
-    filtered_df = create_map_sidebar(df=df, region_options=region_options)
+    filtered_df = create_map_sidebar(df=df, region_options=region_options, species_cmap=color_map)
 
+    filtered_df = do_top_filter(df=filtered_df, species_cmap=color_map)
     # Só cria o mapa se reload_map flag for True
-    if filtered_df.empty:
-        st.warning("Nenhum ponto para mostrar no mapa!")
-    else:
+    #if filtered_df.empty:
+    #    st.warning("Nenhum ponto para mostrar no mapa!")
+    if st.session_state.reload_map:
         st.write(DESCRIPTION_ABOVE_MAP)
-        create_point_map_abs_pos(df=filtered_df)
+        create_point_map(df=filtered_df)
         st.session_state.reload_map = False
