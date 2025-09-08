@@ -8,7 +8,7 @@ import pandas as pd
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
 from dotenv import load_dotenv
 
-RUN_IN_STREAMLIT: bool = False
+RUN_IN_STREAMLIT: bool = True
 SCOPES = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets']
 
 def get_drive_info(run_in_streamlit: bool=RUN_IN_STREAMLIT, scopes: list[str]= SCOPES):
