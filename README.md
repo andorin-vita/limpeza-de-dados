@@ -10,7 +10,6 @@ Este projeto tem como objetivo facilitar a limpeza, organização e visualizaç�
 
 ### Estrutura do Projeto
 - `src/limpeza_de_dados/`: Módulos principais para limpeza, criação de mapas e utilitários.
-- `yamls/`: Ficheiros de referência para distritos, concelhos e freguesias.
 - `config/`: Configurações específicas do projeto.
 - `dados/`: Dados de entrada e saída.
 - `cleaning_tool_app.py`: Streamlit app para validação de novas submissões

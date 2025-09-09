@@ -35,6 +35,7 @@ def get_drive_info(run_in_streamlit: bool=RUN_IN_STREAMLIT, scopes: list[str]= S
                 service_account_info, scopes=scopes),
             'original_form_spreadsheet_url': st.secrets['original_form_spreadsheet_url'],
             'final_form_spreadsheet_url': st.secrets['final_form_spreadsheet_url'],
+            'geographies_url': st.secrets['geographies_url'],
         }
         
 
@@ -47,6 +48,7 @@ def get_drive_info(run_in_streamlit: bool=RUN_IN_STREAMLIT, scopes: list[str]= S
                 service_account_file, scopes=scopes),
             'original_form_spreadsheet_url': os.getenv('ORIGINAL_FORM_SPREADSHEET_URL'),
             'final_form_spreadsheet_url': os.getenv('FINAL_FORM_SPREADSHEET_URL'),
+            'geographies_url': os.getenv('GEOGRAPHIES_URL'),
         }
 
 def read_spreadsheet_as_df(url: str, gc: gspread.client.Client) -> pd.DataFrame:
