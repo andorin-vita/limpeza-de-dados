@@ -193,26 +193,7 @@ def create_point_map(df: pd.DataFrame,
     use_container_width=True,
     )
 
-def do_top_filter(df: pd.DataFrame, 
-                  species_cmap: dict[str, dict[str, str]],
-                  species_col='Espécie'):
-    
-    with st.form("my_form2", border=False):
-        fmt = {key: f"{value['emoji']} {key}" for key, value in color_map.items()}
-        species_selected: str = st.pills(label="",
-                                        options=species_cmap.keys(),
-                                        format_func=lambda x: fmt[x],
-                                        selection_mode='multi',
-                                        key='species-filter2',
-                                        default=species_cmap.keys()
-                                        )
-        
-        submit_legend = st.form_submit_button("Aplicar legenda", type='primary')
-        if submit_legend:
-            st.session_state.reload_map = True  # Set the flag to reload the map
-            return df[filtered_df[species_col].isin(species_selected)]
-        else:
-            return df
+
 
 
 def create_map_sidebar(df: pd.DataFrame,
@@ -339,7 +320,6 @@ if __name__ == "__main__":
     # Lógica principal
     filtered_df = create_map_sidebar(df=df, region_options=region_options, species_cmap=color_map)
 
-    filtered_df = do_top_filter(df=filtered_df, species_cmap=color_map)
     # Só cria o mapa se reload_map flag for True
     #if filtered_df.empty:
     #    st.warning("Nenhum ponto para mostrar no mapa!")
