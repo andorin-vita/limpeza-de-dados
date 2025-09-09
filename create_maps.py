@@ -64,7 +64,7 @@ REGIONS_YML: dict[str, str] = {
 }
 
 def load_yaml_data(yaml_path: str):
-    with open(yaml_path, 'r') as file:
+    with open(yaml_path, 'r', encoding='utf-8') as file:
         content: list[str] = yaml.safe_load(file)
 
     if not content:
