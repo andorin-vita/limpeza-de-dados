@@ -26,8 +26,8 @@ Este projeto tem como objetivo facilitar a limpeza, organização e visualizaç�
 
 ### Como executar localmente
 1. No ficheiro `scr/create_data_flow_to_google.py`, editar `RUN_IN_STREAMLIT: bool = True` para `RUN_IN_STREAMLIT: bool = False`
-2. Num terminal, executar `streamlit run create_maps.py` para visualizar no browser a ferramenta de validação de novas submissões.
-3. Num terminal, executar `streamlit run cleaning_tool_app.py` para visualizar no browser a ferramenta de visualização de mapas de pontos.
+2. Num terminal, executar `streamlit run create_maps.py` para visualizar no browser a ferramenta de visualização de mapas de pontos.
+3. Num terminal, executar `streamlit run cleaning_tool_app.py` para visualizar no browser a ferramenta de validação de novas submissões.
 4. Num terminal, executar `streamlit run create_maps_clusters.py` para visualizar no browser a ferramenta de visualização de mapas de clusters.
 
 ### Extra: Como instalar dependências
