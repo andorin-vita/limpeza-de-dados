@@ -51,10 +51,25 @@ COLS_TOOLTIP: list[str] = ['Espécie',
                            'Local de nidificação',
 ]
 
+def create_cmap_manual():
+    return {
+    "Andorinhão-pálido":   {"emoji": "🟥", "rgb": (244, 67, 54)},
+    "Andorinha-das-barreiras": {"emoji": "🟧", "rgb": (255, 152, 0)},
+    "Andorinhão-preto": {"emoji": "🟨", "rgb": (255, 204, 50)},
+    "Andorinha-dáurica": {"emoji": "🟩", "rgb": (124, 179, 66)},
+    "Andorinhão-cafre": {"emoji": "🟦", "rgb": (25, 118, 210)},
+    "Andorinha-dos-beirais": {"emoji": "🟪", "rgb": (171, 71, 188)},
+    "Andorinhão-real": {"emoji": "🟫", "rgb": (183, 109, 84)},
+    "Andorinha-das-chaminés": {"emoji": "⬛", "rgb": (66, 66, 66)},
+    "Andorinha-das-rochas": {"emoji": "⬜", "rgb": (225, 225, 225)},
+    "Andorinhão-da-serra": {"emoji": "🏻", "rgb": (250, 220, 184)},  
+    # Adicionar abaixo a nova espécie de andorinha
+    #"Andorinha-xxx": {"emoji": "🏽", "rgb": (179, 136, 102)}
+    }
+
 # Não mexer
 DRIVE_INFO: dict[str, str] = get_drive_info()
 GC: gspread.client.Client = gspread.authorize(DRIVE_INFO['creds'])
-
 
 
 def get_region_options_from_geographies(geographies_df: pd.DataFrame, df: pd.DataFrame, col: str) -> list[str]:
@@ -128,61 +143,6 @@ def load_data(url: str = DRIVE_INFO['final_form_spreadsheet_url'],
 
 
 def create_point_map(df: pd.DataFrame,
-                     color_map: dict[str, list[int]],
-                     lat_col: str = 'Latitude',
-                     lon_col: str = 'Longitude',
-                     color_col: str = 'color',
-                     center_lat: float = 39.69484,
-                     center_lon: float = -8.13031,
-                     zoom: int = 6
-                    ):
-
-    # ---- SET VIEW STATE ----
-    view_state = pdk.ViewState(
-        latitude=center_lat,
-        longitude=center_lon,
-        zoom=zoom,      
-        pitch=0,
-    )
-
-    # ---- DECK LAYER ----
-    scatter_layer = pdk.Layer(
-        "ScatterplotLayer",
-        data=df,
-        get_position='[{}, {}]'.format(lon_col, lat_col),
-        get_fill_color=color_col,
-        get_radius=ZOOM_RADIUS_PIXELS,
-        pickable=True,
-        radius_min_pixels=MIN_RADIUS_PIXELS,
-        radius_max_pixels=MAX_RADIUS_PIXELS,
-    )
-
-    # Render the map and legend side by side
-    col1, col2 = st.columns([4, 1])
-    with col1:
-        st.pydeck_chart(
-            pdk.Deck(
-                layers=[scatter_layer],
-                initial_view_state=view_state,
-                map_style="light",
-                tooltip={
-                    "html": "<div style='font-size:12px; line-height:1.4;'>"
-                    + "<br/>".join([f"{col}: {{{col}}}" for col in COLS_TOOLTIP if col not in [color_col, 'Data']])
-                    + "</div>"
-                },
-            ),
-    height=HEIGHT,
-    width=WIDTH,
-    use_container_width=False,
-)
-    with col2:
-        for species, color in color_map.items():
-            st.markdown(
-                f'<span style="color: rgb{tuple(color)}; font-size: 11px;">■ {species}</span>',
-                unsafe_allow_html=True
-            )
-
-def create_point_map_abs_pos(df: pd.DataFrame,
                      lat_col: str = 'Latitude',
                      lon_col: str = 'Longitude',
                      color_col: str = 'color',
@@ -212,21 +172,6 @@ def create_point_map_abs_pos(df: pd.DataFrame,
         radius_max_pixels=MAX_RADIUS_PIXELS,
     )
 
-    df_colors: pd.DataFrame = df.drop_duplicates(legend_col)
-    # Build HTML for overlay legend
-    legend_html = f"""<div style='position:absolute; top:{VERTICAL_LEGEND}px; 
-    left:{HORIZONTAL_LEGEND}px; background:white; 
-    padding:8px; z-index:999; border-radius:4px; box-shadow:0 2px 6px rgba(0,0,0,0.2);'>"""
-    for _, row in df_colors.iterrows():
-        color_str = f"rgb({row[color_col][0]},{row[color_col][1]},{row[color_col][2]})"
-        legend_html += f"<div style='display:flex; align-items:center; gap:6px; margin-bottom:2px;'>"
-        legend_html += f"<div style='width:16px; height:16px; background:{color_str};'></div>"
-        legend_html += f"<span>{row[legend_col]}</span></div>"
-    legend_html += "</div>"
-
-    # Use st.markdown with unsafe_allow_html to float the legend
-    st.markdown(legend_html, unsafe_allow_html=True)
-
     # Render the map and legend side by side
     st.pydeck_chart(
         pdk.Deck(
@@ -241,7 +186,7 @@ def create_point_map_abs_pos(df: pd.DataFrame,
         ),
     height=HEIGHT,
     width=WIDTH,
-    use_container_width=False,
+    use_container_width=True,
     )
 
 
@@ -286,6 +231,7 @@ def get_cascading_options(geographies_df: pd.DataFrame,
 
 def create_map_sidebar(df: pd.DataFrame,
                        geographies_df: pd.DataFrame,
+                       species_cmap: dict[str, dict[str, str]],
                        species_col: str = 'Espécie',
                        nest_structure_col: str = 'Estrutura de nidificação',
                        n_nests_col: str = 'Nº ninhos ocupados',
@@ -302,11 +248,13 @@ def create_map_sidebar(df: pd.DataFrame,
 
         st.title("Filtros")
 
-        species_selected: list[str] = st.multiselect(
-            label="Espécie",
-            options=species,
-            key="species_filter"
-        )
+        fmt = {key: f"{value['emoji']} {key}" for key, value in species_cmap.items()}
+        species_selected: str = st.pills(label="Espécie",
+                                            options=species_cmap.keys(),
+                                            format_func=lambda x: fmt[x],
+                                            selection_mode='multi',
+                                            key='species-filter'
+                                            )
 
         n_nests_selected: tuple = st.slider(
             label="Ninhos",
@@ -411,16 +359,16 @@ if __name__ == "__main__":
     region_options = load_all_region_options(df, geographies_df)
 
     # Adicionar cores
-    color_map = create_cmap(df=df, color_col="Espécie")
-    df['color'] = df['Espécie'].map(color_map)
+    color_map = create_cmap_manual()
+    df['color'] = [color_map[key]["rgb"] for key in df['Espécie']]
 
     # Lógica principal
-    filtered_df = create_map_sidebar(df=df, geographies_df=geographies_df)
+    filtered_df = create_map_sidebar(df=df, geographies_df=geographies_df, species_cmap=color_map)
 
     # Só cria o mapa se reload_map flag for True
     if filtered_df.empty:
         st.warning("Nenhum ponto para mostrar no mapa!")
     else:
         st.write(DESCRIPTION_ABOVE_MAP)
-        create_point_map_abs_pos(df=filtered_df)
+        create_point_map(df=filtered_df)
         st.session_state.reload_map = False
