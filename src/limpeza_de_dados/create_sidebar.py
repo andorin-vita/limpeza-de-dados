@@ -49,9 +49,10 @@ Notas:
 
 """
 
-import streamlit as st
+from math import asin, cos, radians, sin, sqrt
+
 import pandas as pd
-from math import radians, cos, sin, asin, sqrt
+import streamlit as st
 
 
 def get_sorted_submission_options(df):
@@ -60,77 +61,75 @@ def get_sorted_submission_options(df):
     # Build display strings
     new_df["display"] = new_df.apply(
         lambda row: f"{row['Timestamp']} | {row['Data'].date()} | {row['Espécie']} | {row['Coordenadas']}",
-        axis=1
+        axis=1,
     )
 
     display_to_id = dict(zip(new_df["display"], new_df["Timestamp"]))
 
     return new_df["display"], display_to_id
 
+
 def haversine(lat1, lon1, lat2, lon2):
     # Simple geographic distance calc in m
     lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
     dlon, dlat = lon2 - lon1, lat2 - lat1
-    a = sin(dlat/2)**2 + cos(lat1)*cos(lat2)*sin(dlon/2)**2
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
     c = 2 * asin(sqrt(a))
-    return 1000*6371 * c
+    return 1000 * 6371 * c
 
 
 def create_filter_options():
     """Create and return filter options from the sidebar."""
     filters = {
-        'use_coordinates': st.sidebar.checkbox("Comparação de coordenadas", value=True),
-        'use_andares_dif': st.sidebar.checkbox("Comparação do número de andares", value=False),
-        'use_dias_dif': st.sidebar.checkbox("Comparação datas", value=False),
-        'use_especie': st.sidebar.checkbox("Mesma espécie?", value=False),
-        'use_estrutura': st.sidebar.checkbox("Mesma estrutura de nidificação?", value=False),
-        'use_utilizador': st.sidebar.checkbox("Mesmo utilizador?", value=False)
+        "use_coordinates": st.sidebar.checkbox("Comparação de coordenadas", value=True),
+        "use_andares_dif": st.sidebar.checkbox(
+            "Comparação do número de andares", value=False
+        ),
+        "use_dias_dif": st.sidebar.checkbox("Comparação datas", value=False),
+        "use_especie": st.sidebar.checkbox("Mesma espécie?", value=False),
+        "use_estrutura": st.sidebar.checkbox(
+            "Mesma estrutura de nidificação?", value=False
+        ),
+        "use_utilizador": st.sidebar.checkbox("Mesmo utilizador?", value=False),
     }
 
     return filters
 
+
 def create_filter_parameters(filters):
     """Create and return filter parameters based on selected filters."""
     params = {}
-    
-    if filters['use_coordinates']:
-        params['dist_m'] = st.sidebar.slider(
-            "Distância (m)",
-            min_value=10,
-            max_value=200,
-            value=10,
-            step=1
+
+    if filters["use_coordinates"]:
+        params["dist_m"] = st.sidebar.slider(
+            "Distância (m)", min_value=10, max_value=200, value=10, step=1
         )
-    
-    if filters['use_andares_dif']:
-        params['diff_a'] = st.sidebar.slider(
-            "Diferença (andares)",
-            min_value=0,
-            max_value=20,
-            value=2,
-            step=1
+
+    if filters["use_andares_dif"]:
+        params["diff_a"] = st.sidebar.slider(
+            "Diferença (andares)", min_value=0, max_value=20, value=2, step=1
         )
-    
-    if filters['use_dias_dif']:
-        params['diff_d'] = st.sidebar.slider(
-            "Diferença (dias)",
-            min_value=0,
-            max_value=600,
-            value=365,
-            step=1
+
+    if filters["use_dias_dif"]:
+        params["diff_d"] = st.sidebar.slider(
+            "Diferença (dias)", min_value=0, max_value=600, value=365, step=1
         )
-    
+
     return params
 
-def apply_coordinate_filter(filtered_df, selected_row, distance_col, lat_col, lon_col, dist_m):
+
+def apply_coordinate_filter(
+    filtered_df, selected_row, distance_col, lat_col, lon_col, dist_m
+):
     """Apply coordinate-based distance filter."""
     filtered_df[distance_col] = filtered_df.apply(
         lambda row: haversine(
-            selected_row[lat_col], selected_row[lon_col],
-            row[lat_col], row[lon_col]
-        ), axis=1
+            selected_row[lat_col], selected_row[lon_col], row[lat_col], row[lon_col]
+        ),
+        axis=1,
     )
     return filtered_df[filtered_df[distance_col] <= dist_m]
+
 
 def apply_height_filter(filtered_df, selected_row, height_col, diff_a):
     """Apply height difference filter."""
@@ -139,57 +138,80 @@ def apply_height_filter(filtered_df, selected_row, height_col, diff_a):
     filtered_df["diff_andares"] = (filtered_df[height_col] - selected_altura).abs()
     return filtered_df[filtered_df["diff_andares"] <= diff_a]
 
+
 def apply_date_filter(filtered_df, selected_row, date_col, diff_d):
     """Apply date difference filter."""
-    filtered_df["date_dt"] = pd.to_datetime(filtered_df[date_col], dayfirst=True, errors="coerce")
-    selected_date = pd.to_datetime(selected_row[date_col], dayfirst=True, errors="coerce")
+    filtered_df["date_dt"] = pd.to_datetime(
+        filtered_df[date_col], dayfirst=True, errors="coerce"
+    )
+    selected_date = pd.to_datetime(
+        selected_row[date_col], dayfirst=True, errors="coerce"
+    )
     filtered_df["diff_dias"] = (filtered_df["date_dt"] - selected_date).abs().dt.days
     return filtered_df[filtered_df["diff_dias"] <= diff_d]
 
-def apply_field_filters(filtered_df, selected_row, filters, species_col, nest_structure_col, email_col):
+
+def apply_field_filters(
+    filtered_df, selected_row, filters, species_col, nest_structure_col, email_col
+):
     """Apply exact match filters for species, structure, and user."""
     field_filters = [
-        (species_col, filters['use_especie']),
-        (nest_structure_col, filters['use_estrutura']),
-        (email_col, filters['use_utilizador']),
+        (species_col, filters["use_especie"]),
+        (nest_structure_col, filters["use_estrutura"]),
+        (email_col, filters["use_utilizador"]),
     ]
-    
+
     for col_name, use_filter in field_filters:
         if use_filter:
             filtered_df = filtered_df[filtered_df[col_name] == selected_row[col_name]]
     return filtered_df
 
+
 def apply_all_filters(
-        df_to_filter: pd.DataFrame,
-        selected_row: pd.Series,
-        filters: dict[str, bool],
-        filter_params: dict[str, str|float|int],
-        lat_col: str, 
-        lon_col: str,
-        distance_col: str,
-        height_col: str,
-        date_col: str,
-        species_col: str,
-        nest_structure_col: str,
-        email_col: str
+    df_to_filter: pd.DataFrame,
+    selected_row: pd.Series,
+    filters: dict[str, bool],
+    filter_params: dict[str, str | float | int],
+    lat_col: str,
+    lon_col: str,
+    distance_col: str,
+    height_col: str,
+    date_col: str,
+    species_col: str,
+    nest_structure_col: str,
+    email_col: str,
 ) -> pd.DataFrame:
     # Start with validated dataset
     filtered_df = df_to_filter.copy()
 
     # Apply filters sequentially
-    if filters['use_coordinates']:
-        filtered_df = apply_coordinate_filter(filtered_df, selected_row, distance_col, lat_col, lon_col, filter_params['dist_m'])
-    
-    if filters['use_andares_dif']:
-        filtered_df = apply_height_filter(filtered_df, selected_row, height_col, filter_params['diff_a'])
-    
-    if filters['use_dias_dif']:
-        filtered_df = apply_date_filter(filtered_df, selected_row, date_col, filter_params['diff_d'])
-    
+    if filters["use_coordinates"]:
+        filtered_df = apply_coordinate_filter(
+            filtered_df,
+            selected_row,
+            distance_col,
+            lat_col,
+            lon_col,
+            filter_params["dist_m"],
+        )
+
+    if filters["use_andares_dif"]:
+        filtered_df = apply_height_filter(
+            filtered_df, selected_row, height_col, filter_params["diff_a"]
+        )
+
+    if filters["use_dias_dif"]:
+        filtered_df = apply_date_filter(
+            filtered_df, selected_row, date_col, filter_params["diff_d"]
+        )
+
     # Apply remaining field filters
-    filtered_df = apply_field_filters(filtered_df, selected_row, filters, species_col, nest_structure_col, email_col)
+    filtered_df = apply_field_filters(
+        filtered_df, selected_row, filters, species_col, nest_structure_col, email_col
+    )
 
     return filtered_df
+
 
 def show_results(filtered_df: pd.DataFrame):
     if not filtered_df.empty:
@@ -198,19 +220,25 @@ def show_results(filtered_df: pd.DataFrame):
     else:
         st.warning("✅ Nenhuma submissão similar encontrada.")
 
-def get_submission_to_validate(
-        df_new_submissions: pd.DataFrame,
-        n_timestamp_col: str):
+
+def get_submission_to_validate(df_new_submissions: pd.DataFrame, n_timestamp_col: str):
     st.markdown("## Seleciona uma submissão não validada")
-    st.write("Será comparada com outras submissões semelhantes, com base nos filtros escolhidos na barra lateral.")
+    st.write(
+        "Será comparada com outras submissões semelhantes, com base nos filtros escolhidos na barra lateral."
+    )
     display_options, display_to_id = get_sorted_submission_options(df_new_submissions)
-    selected_display = st.selectbox(label="Submissões (da mais recente para a mais antiga):",
-                                    options=display_options,
-                                    placeholder='Selecciona a submissão')
+    selected_display = st.selectbox(
+        label="Submissões (da mais recente para a mais antiga):",
+        options=display_options,
+        placeholder="Selecciona a submissão",
+    )
     selected_id = display_to_id[selected_display]
-    selected_row = df_new_submissions[df_new_submissions[n_timestamp_col] == selected_id].iloc[0]
+    selected_row = df_new_submissions[
+        df_new_submissions[n_timestamp_col] == selected_id
+    ].iloc[0]
 
     return selected_row
+
 
 def show_selected_row_as_table(selected_row: pd.Series, height: int = 635):
     st.subheader("Submissão seleccionada completa:")

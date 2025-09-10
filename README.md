@@ -10,7 +10,6 @@ Este projeto tem como objetivo facilitar a limpeza, organização e visualizaç�
 
 ### Estrutura do Projeto
 - `src/limpeza_de_dados/`: Módulos principais para limpeza, criação de mapas e utilitários.
-- `yamls/`: Ficheiros de referência para distritos, concelhos e freguesias.
 - `config/`: Configurações específicas do projeto.
 - `dados/`: Dados de entrada e saída.
 - `cleaning_tool_app.py`: Streamlit app para validação de novas submissões
@@ -26,10 +25,10 @@ Este projeto tem como objetivo facilitar a limpeza, organização e visualizaç�
     - Colocar os urls das Google Sheets nas respetivas variáveis 
 
 ### Como executar localmente
-1. No ficheiro `scr/create_data_flow_to_google.py`, editar `RUN_IN_STREAMLIT: bool = False` para `RUN_IN_STREAMLIT: bool = True`
-2. Num terminal, executar `streamlit run cleaning_tool_app.py` para visualizar no browser a ferramenta de validação de novas submissões.
-2. Num terminal, executar `streamlit run create_maps.py` para visualizar no browser a ferramenta de visualização de mapas de pontos.
-2. Num terminal, executar `streamlit run create_maps_clusters.py` para visualizar no browser a ferramenta de visualização de mapas de clusters.
+1. No ficheiro `scr/create_data_flow_to_google.py`, editar `RUN_IN_STREAMLIT: bool = True` para `RUN_IN_STREAMLIT: bool = False`
+2. Num terminal, executar `streamlit run create_maps.py` para visualizar no browser a ferramenta de validação de novas submissões.
+3. Num terminal, executar `streamlit run cleaning_tool_app.py` para visualizar no browser a ferramenta de visualização de mapas de pontos.
+4. Num terminal, executar `streamlit run create_maps_clusters.py` para visualizar no browser a ferramenta de visualização de mapas de clusters.
 
 ### Extra: Como instalar dependências
 
@@ -59,6 +58,12 @@ Windows:
 uv venv
 .venv\Scripts\activate
 uv sync
+```
+
+### Antes de fazer commit
+Por favor, execute o seguinte comando para formatar o código:
+```bash
+python -m pre_commit run -a
 ```
 
 ### Extra: Como obter uma chave de service account
