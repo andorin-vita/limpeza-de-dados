@@ -307,3 +307,4 @@ xyzservices==2025.4.0
     #   folium
     #   ipyleaflet
     #   leafmap
+pre-commit-4.3.0
