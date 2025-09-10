@@ -72,8 +72,6 @@ DRIVE_INFO: dict[str, str] = get_drive_info()
 GC: gspread.client.Client = gspread.authorize(DRIVE_INFO['creds'])
 
 
-
-
 def get_region_options_from_geographies(geographies_df: pd.DataFrame, df: pd.DataFrame, col: str) -> list[str]:
     """Get region options from both the main dataframe and the geographies Google Sheet"""
     from_geographies: list[str] = geographies_df[col].dropna().unique().tolist()
@@ -243,6 +241,7 @@ def create_map_sidebar(df: pd.DataFrame,
                        year_col: str = 'Year'):
     
     with st.sidebar:
+        species: list[str] = sorted(df[species_col].dropna().unique(), key=unidecode)
         nest_structure: list[str] = sorted(df[nest_structure_col].dropna().unique(), key=unidecode)
         n_nests: list[str] = sorted(df[n_nests_col].dropna().unique())
         year = sorted(df[year_col].dropna().unique())
