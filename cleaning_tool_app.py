@@ -44,7 +44,6 @@ def load_data_submissions(
     df: pd.DataFrame = read_spreadsheet_as_df(url=url, gc=gc)
     df = convert_column_names(df)
     df_new_sub: pd.DataFrame = find_new_entries(df_raw=df, df_analysis=df_analysis)
-    df_new_sub = df_new_sub.head(20)
     return full_clean_data(df_raw=df_new_sub)
 
 
