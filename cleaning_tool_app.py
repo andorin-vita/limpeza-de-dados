@@ -18,7 +18,7 @@ from limpeza_de_dados.create_sidebar import (
     show_selected_row_as_table,
 )
 from limpeza_de_dados.utils import find_new_entries
-from limpeza_de_dados.clean_google_form_data import full_clean_data, CONVERSION, convert_column_names
+from limpeza_de_dados.clean_google_form_data import convert_column_names
 
 DRIVE_INFO: dict[str, str] = get_drive_info()
 GC: gspread.client.Client = gspread.authorize(DRIVE_INFO["creds"])

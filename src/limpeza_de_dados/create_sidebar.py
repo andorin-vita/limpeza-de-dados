@@ -53,8 +53,6 @@ from math import asin, cos, radians, sin, sqrt
 
 import pandas as pd
 import streamlit as st
-import pandas as pd
-from math import radians, cos, sin, asin, sqrt
 
 from limpeza_de_dados.clean_google_form_data import add_detailed_location
 

@@ -76,7 +76,7 @@ def add_detailed_location(row: pd.Series,
         row['Freguesia'] = next((address[key] for key in freguesia_keys if key in address), None)
         row['Concelho']  = next((address[key] for key in concelho_keys  if key in address), None)
         row['Distrito']  = next((address[key] for key in distrito_keys  if key in address), None)
-    except:
+    except Exception:
         pass
     return row
 
