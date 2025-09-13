@@ -53,6 +53,10 @@ from math import asin, cos, radians, sin, sqrt
 
 import pandas as pd
 import streamlit as st
+import pandas as pd
+from math import radians, cos, sin, asin, sqrt
+
+from limpeza_de_dados.clean_google_form_data import add_detailed_location
 
 
 def get_sorted_submission_options(df):
@@ -233,9 +237,8 @@ def get_submission_to_validate(df_new_submissions: pd.DataFrame, n_timestamp_col
         placeholder="Selecciona a submissão",
     )
     selected_id = display_to_id[selected_display]
-    selected_row = df_new_submissions[
-        df_new_submissions[n_timestamp_col] == selected_id
-    ].iloc[0]
+    selected_row = df_new_submissions[df_new_submissions[n_timestamp_col] == selected_id].iloc[0]
+    selected_row = add_detailed_location(selected_row)
 
     return selected_row
 

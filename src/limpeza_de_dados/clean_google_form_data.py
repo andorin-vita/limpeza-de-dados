@@ -62,49 +62,30 @@ def convert_column_names(
     df = df.rename(columns=convert_dict)
     return df
 
+def add_detailed_location(row: pd.Series,
+                  geolocator=GEOLOCATOR):
+    row['Freguesia'] = None
+    row['Concelho'] = None
+    row['Distrito'] = None
 
-def add_detailed_location(df: pd.DataFrame, geolocator=GEOLOCATOR):
-    df["Freguesia"] = None
-    df["Concelho"] = None
-    df["Distrito"] = None
-
-    for index, row in df.iterrows():
-        try:
-            freguesia_keys = [
-                "city_district",
-                "village",
-                "suburb",
-                "neighborhood",
-                "neighbourhood",
-                "town",
-                "borough",
-            ]
-            concelho_keys = ["city", "municipality", "town"]
-            distrito_keys = ["county", "state", "region"]
-
-            address = geolocator.reverse((row["Latitude"], row["Longitude"])).raw[
-                "address"
-            ]
-            df.loc[index, "Freguesia"] = next(
-                (address[key] for key in freguesia_keys if key in address), None
-            )
-            df.loc[index, "Concelho"] = next(
-                (address[key] for key in concelho_keys if key in address), None
-            )
-            df.loc[index, "Distrito"] = next(
-                (address[key] for key in distrito_keys if key in address), None
-            )
-        except Exception as e:
-            print("Error adding detailed location:", e)
-            pass
-    return df
+    freguesia_keys = ['city_district', 'village', 'suburb', 'neighborhood', 'neighbourhood', 'town', 'borough']
+    concelho_keys = ['city', 'municipality', 'town']
+    distrito_keys = ['county', 'state', 'region']
+    try:
+        address = geolocator.reverse((row['Latitude'], row['Longitude'])).raw['address']
+        row['Freguesia'] = next((address[key] for key in freguesia_keys if key in address), None)
+        row['Concelho']  = next((address[key] for key in concelho_keys  if key in address), None)
+        row['Distrito']  = next((address[key] for key in distrito_keys  if key in address), None)
+    except:
+        pass
+    return row
 
 
 def convert_datatypes(df: pd.DataFrame):
     if not df.empty:
         df["Data"] = pd.to_datetime(df["Data"], errors="coerce")
-        df["Nº ninhos ocupados"] = df["Altura (andares)"].astype("int")
-        df["Altura (andares)"] = df["Altura (andares)"].astype("int")
+        df['Nº ninhos ocupados'] = df['Nº ninhos ocupados'].astype('Int32')
+        df['Altura (andares)'] = df['Altura (andares)'].astype('Int32')
 
     return df
 
@@ -128,9 +109,7 @@ def add_missing_data_col(df: pd.DataFrame, missing_data_col: str = "Dados em Fal
 
 
 def full_clean_data(df_raw: pd.DataFrame):
-    df = convert_column_names(df_raw)
-    df = split_coordinates(df)
-    df = add_detailed_location(df)
+    df = split_coordinates(df_raw)
     df = convert_datatypes(df)
     df = add_code_col(df)
     df = add_missing_data_col(df)
