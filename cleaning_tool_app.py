@@ -18,6 +18,7 @@ from limpeza_de_dados.create_sidebar import (
     show_selected_row_as_table,
 )
 from limpeza_de_dados.utils import find_new_entries
+from limpeza_de_dados.clean_google_form_data import convert_column_names
 
 DRIVE_INFO: dict[str, str] = get_drive_info()
 GC: gspread.client.Client = gspread.authorize(DRIVE_INFO["creds"])
@@ -41,8 +42,9 @@ def load_data_submissions(
     gc: gspread.client.Client = GC,
 ):
     df: pd.DataFrame = read_spreadsheet_as_df(url=url, gc=gc)
-    df = full_clean_data(df_raw=df)
-    return find_new_entries(df_raw=df, df_analysis=df_analysis)
+    df = convert_column_names(df)
+    df_new_sub: pd.DataFrame = find_new_entries(df_raw=df, df_analysis=df_analysis)
+    return full_clean_data(df_raw=df_new_sub)
 
 
 @st.cache_data
