@@ -74,6 +74,17 @@ def main(
 
     # Carregar dados
     df_validated = load_data_analysis()
+
+    no_validated_data = (
+        df_validated.empty
+        or id_col not in df_validated.columns
+        or df_validated[id_col].dropna().empty
+    )
+
+    if no_validated_data:
+        final_url = DRIVE_INFO.get("final_form_spreadsheet_url", "URL não disponível")
+        st.warning(f"Não existem dados validados. " f"Spreadsheet final: {final_url}")
+
     df_submissions: pd.DataFrame = load_data_submissions(df_analysis=df_validated)
     # Submissão a validar
     selected_row = get_submission_to_validate(df_submissions, n_timestamp_col)
@@ -89,7 +100,10 @@ def main(
         st.session_state["filtered_df"] = df_validated
 
     if "submission_id" not in st.session_state:
-        st.session_state["submission_id"] = int(max(df_validated[id_col]) + 1)
+        if no_validated_data:
+            st.session_state["submission_id"] = 1
+        else:
+            st.session_state["submission_id"] = int(max(df_validated[id_col]) + 1)
 
     if "new_lat" not in st.session_state:
         st.session_state["new_lat"] = selected_row[lat_col]
