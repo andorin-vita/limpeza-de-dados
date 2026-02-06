@@ -2,7 +2,11 @@ import gspread
 import pandas as pd
 import streamlit as st
 
-from limpeza_de_dados.clean_google_form_data import CONVERSION, full_clean_data
+from limpeza_de_dados.clean_google_form_data import (
+    CONVERSION,
+    convert_column_names,
+    full_clean_data,
+)
 from limpeza_de_dados.create_data_flow_to_google import (
     append_row_to_spreadsheet,
     get_drive_info,
@@ -18,7 +22,6 @@ from limpeza_de_dados.create_sidebar import (
     show_selected_row_as_table,
 )
 from limpeza_de_dados.utils import find_new_entries
-from limpeza_de_dados.clean_google_form_data import convert_column_names
 
 DRIVE_INFO: dict[str, str] = get_drive_info()
 GC: gspread.client.Client = gspread.authorize(DRIVE_INFO["creds"])
