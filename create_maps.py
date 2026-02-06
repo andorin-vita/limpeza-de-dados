@@ -148,6 +148,8 @@ def load_data(
 ):
     df = read_spreadsheet_as_df(url=url, gc=gc)
     df = df[cols_to_use]
+    if df.empty:
+        return df
     df = df.dropna(subset=[lat_col, lon_col])
     df = df.sort_values(by=[colony_id_col, date_col], ascending=True)
     df = df.drop_duplicates(subset=[colony_id_col], keep="last")
@@ -409,6 +411,11 @@ if __name__ == "__main__":
 
     # === Indica aqui o caminho do teu ficheiro CSV ===
     df: pd.DataFrame = load_data()
+
+    if df.empty:
+        spreadsheet_url = DRIVE_INFO["final_form_spreadsheet_url"]
+        st.warning(f"No data in the spreadsheet: {spreadsheet_url}")
+        st.stop()
 
     # Load geographical data from Google Sheets
     geographies_df: pd.DataFrame = load_geographies_data()
