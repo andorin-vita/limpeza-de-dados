@@ -81,9 +81,15 @@ def add_detailed_location(row: pd.Series, geolocator=GEOLOCATOR):
     distrito_keys = ["county", "state", "region"]
     try:
         address = geolocator.reverse((row["Latitude"], row["Longitude"])).raw["address"]
-        row["Freguesia"] = next((address[key] for key in freguesia_keys if key in address), None)
-        row["Concelho"] = next((address[key] for key in concelho_keys if key in address), None)
-        row["Distrito"] = next((address[key] for key in distrito_keys if key in address), None)
+        row["Freguesia"] = next(
+            (address[key] for key in freguesia_keys if key in address), None
+        )
+        row["Concelho"] = next(
+            (address[key] for key in concelho_keys if key in address), None
+        )
+        row["Distrito"] = next(
+            (address[key] for key in distrito_keys if key in address), None
+        )
     except Exception:
         pass
     return row
@@ -98,7 +104,9 @@ def convert_datatypes(df: pd.DataFrame):
     return df
 
 
-def sort_df(df: pd.DataFrame, cols_to_sort: list[str] = ["Data"], ascending: bool = False):
+def sort_df(
+    df: pd.DataFrame, cols_to_sort: list[str] = ["Data"], ascending: bool = False
+):
     if not df.empty:
         df = df.sort_values(by=cols_to_sort, ascending=ascending)
     return df

@@ -72,6 +72,7 @@ def create_cmap_manual():
         # "Andorinha-xxx": {"rgb": (179, 136, 102)}
     }
 
+
 # Não mexer
 DRIVE_INFO: dict[str, str] = get_drive_info()
 GC: gspread.client.Client = gspread.authorize(DRIVE_INFO["creds"])
