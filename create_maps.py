@@ -18,7 +18,7 @@ DESCRIPTION_ABOVE_MAP: str = """"""
 MIN_RADIUS_PIXELS: int = 2
 MAX_RADIUS_PIXELS: int = 10
 ZOOM_RADIUS_PIXELS: int = 500
-HEIGHT: int = 600
+HEIGHT: int = 800
 WIDTH: int = 900
 VERTICAL_LEGEND: int = 190
 HORIZONTAL_LEGEND: int = 650
@@ -333,10 +333,6 @@ def create_map_sidebar(
             key="nests_filter",
         )
 
-        structure_selected: list[str] = st.multiselect(
-            label="Estrutura", options=nest_structure, key="structure_filter"
-        )
-
         # Geographic filters with cascading logic
         districts_selected: list[str] = st.multiselect(
             label="Distrito",
@@ -367,6 +363,10 @@ def create_map_sidebar(
             label="Freguesia",
             options=cascading_options["Freguesia"],
             key="freguesia_filter",
+        )
+
+        structure_selected: list[str] = st.multiselect(
+            label="Estrutura", options=nest_structure, key="structure_filter"
         )
 
         # Altitude filter (only if column exists in data)

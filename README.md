@@ -36,10 +36,12 @@ A informação geográfica de cada colónia é obtida automaticamente a partir d
     - Colocar os urls das Google Sheets nas respetivas variáveis 
 
 ### Como executar localmente
-1. No ficheiro `scr/create_data_flow_to_google.py`, editar `RUN_IN_STREAMLIT: bool = True` para `RUN_IN_STREAMLIT: bool = False`
-2. Num terminal, executar `streamlit run create_maps.py` para visualizar no browser a ferramenta de visualização de mapas de pontos.
-3. Num terminal, executar `streamlit run cleaning_tool_app.py` para visualizar no browser a ferramenta de validação de novas submissões.
-4. Num terminal, executar `streamlit run create_maps_clusters.py` para visualizar no browser a ferramenta de visualização de mapas de clusters.
+1. Para entrar no ambiente de trabalho se estiver em Windows: correr no terminal `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process`, correr no terminal `.venv/Scripts/Activate.ps1`
+2. No ficheiro `scr/create_data_flow_to_google.py`, editar `RUN_IN_STREAMLIT: bool = True` para `RUN_IN_STREAMLIT: bool = False`
+3. Num terminal, executar `streamlit run create_maps.py` para visualizar no browser a ferramenta de visualização de mapas de pontos.
+4. Num terminal, executar `streamlit run cleaning_tool_app.py` para visualizar no browser a ferramenta de validação de novas submissões.
+5. Num terminal, executar `streamlit run create_maps_clusters.py` para visualizar no browser a ferramenta de visualização de mapas de clusters.
+6. Antes de fazer commit: No ficheiro `scr/create_data_flow_to_google.py`, editar `RUN_IN_STREAMLIT: bool = False` para `RUN_IN_STREAMLIT: bool = True`
 
 ### Extra: Como instalar dependências
 
