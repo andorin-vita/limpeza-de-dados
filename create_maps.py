@@ -43,23 +43,18 @@ COLS_TO_USE: list[str] = [
     "Data",
 ]
 
-# Campos para tooltip
-COLS_TOOLTIP: list[str] = [
-    "Espécie",
-    "ID da colónia",
-    "Coordenadas",
-    "Distrito",
-    "Concelho",
-    "Freguesia",
-    "Altitude (m)",
-    "Região Hidrográfica",
-    "Bacia Hidrográfica",
-    "Estrutura de nidificação",
-    "Nº ninhos ocupados",
-    "Altura (andares)",
-    "Estado da estrutura",
-    "Local de nidificação",
-]
+# Campos para tooltip (coluna → label a mostrar)
+COLS_TOOLTIP: dict[str, str] = {
+    "Espécie": "Espécie",
+    "Coordenadas": "Coordenadas",
+    "Altitude (m)": "Altitude",
+    "Data da observação": "Data da observação",
+    "Nº ninhos ocupados": "Nº de ninhos",
+    "Altura (andares)": "Altura",
+    "Estrutura de nidificação": "Estrutura de nidificação",
+    "Local de nidificação": "Local de nidificação",
+    "Estado da estrutura": "Estado da estrutura",
+}
 
 
 def create_cmap_manual():
@@ -217,9 +212,8 @@ def create_point_map(
                 "html": "<div style='font-size:12px; line-height:1.4;'>"
                 + "<br/>".join(
                     [
-                        f"{col}: {{{col}}}"
-                        for col in COLS_TOOLTIP
-                        if col not in [color_col, "Data"]
+                        f"<b>{label}</b>: {{{col}}}"
+                        for col, label in COLS_TOOLTIP.items()
                     ]
                 )
                 + "</div>"
@@ -491,6 +485,14 @@ if __name__ == "__main__":
 
     # Listar regiões
     region_options = load_all_region_options(df, geographies_df)
+
+    # Adicionar colunas para tooltip
+    df["Coordenadas"] = (
+        df["Latitude"].round(5).astype(str)
+        + ", "
+        + df["Longitude"].round(5).astype(str)
+    )
+    df["Data da observação"] = df["Data"].dt.strftime("%Y-%m-%d")
 
     # Adicionar cores
     color_map = create_cmap_manual()
