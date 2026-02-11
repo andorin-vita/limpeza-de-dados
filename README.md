@@ -78,3 +78,17 @@ Assumindo que já existe um projeto no Google Cloud Console e que os scopes nece
 5. Escolher "Gerenciar chaves"/"Manage Keys"
 6. Seleccionar "Adicionar chave"/"Add Key"
 7. Escolher opção "JSON" no pop-up - isto inicia download de um ficheiro - este é o ficheiro que devemos mover para a nossa pasta
+
+### Como mudar o tamanho do mapa
+
+O tamanho do mapa é controlado pelas constantes no topo do ficheiro `create_maps.py`:
+
+```python
+HEIGHT: int = 600   # Altura do mapa em pixels
+WIDTH: int = 900    # Largura do mapa em pixels
+```
+
+- **`HEIGHT`** — altura do mapa. Aumentar para um mapa mais alto, diminuir para mais compacto.
+- **`WIDTH`** — largura do mapa. Atualmente **não tem efeito** porque `use_container_width=True` está ativo (o mapa ocupa toda a largura do container Streamlit).
+
+Para que a largura fixa (`WIDTH`) tenha efeito, mudar `use_container_width=True` para `False` na chamada `st.pydeck_chart` dentro da função `create_point_map`.

@@ -291,7 +291,6 @@ def create_map_sidebar(
 ):
 
     with st.sidebar:
-        species: list[str] = sorted(df[species_col].dropna().unique(), key=unidecode)
         nest_structure: list[str] = sorted(
             df[nest_structure_col].dropna().unique(), key=unidecode
         )
@@ -300,22 +299,23 @@ def create_map_sidebar(
 
         st.title("Filtros")
 
-        # Display color legend
-        st.write("**Legenda de Cores:**")
-        for species, data in species_cmap.items():
-            rgb = data["rgb"]
-            hex_color = f"#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
-            st.markdown(
-                f'<div style="display: flex; align-items: center; margin-bottom: 5px;"><div style="width: 20px; height: 20px; background-color: {hex_color}; border: 1px solid #ccc; margin-right: 10px;"></div>{species}</div>',
-                unsafe_allow_html=True,
-            )
+        # Placeholder for the legend — will be filled after filtering
+        legend_placeholder = st.empty()
 
         species_selected: str = st.multiselect(
             label="Espécie", options=species_cmap.keys(), key="species-filter"
         )
 
+        years_selected: tuple = st.slider(
+            label="Ano",
+            min_value=int(year[0]),
+            max_value=int(year[-1]),
+            value=(int(year[0]), int(year[-1])),
+            key="year_filter",
+        )
+
         n_nests_selected: tuple = st.slider(
-            label="Ninhos",
+            label="Nº de ninhos",
             min_value=int(n_nests[0]),
             max_value=int(n_nests[-1]),
             value=(int(n_nests[0]), int(n_nests[-1])),
@@ -358,14 +358,6 @@ def create_map_sidebar(
             key="freguesia_filter",
         )
 
-        years_selected: tuple = st.slider(
-            label="Ano de Registo",
-            min_value=int(year[0]),
-            max_value=int(year[-1]),
-            value=(int(year[0]), int(year[-1])),
-            key="year_filter",
-        )
-
         # Apply filters immediately (no submit button needed)
         filtered_df: pd.DataFrame = deepcopy(df)
 
@@ -403,6 +395,26 @@ def create_map_sidebar(
                 (filtered_df["Year"] >= years_selected[0])
                 & (filtered_df["Year"] <= years_selected[1])
             ]
+
+        # Build legend based on filtered data: only species present + count
+        filtered_species_counts = (
+            filtered_df[species_col]
+            .value_counts()
+            .sort_index(key=lambda x: x.map(unidecode))
+        )
+        with legend_placeholder.container():
+            st.write("**Legenda de Cores:**")
+            for sp_name, count in filtered_species_counts.items():
+                if sp_name in species_cmap:
+                    rgb = species_cmap[sp_name]["rgb"]
+                    hex_color = f"#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
+                    st.markdown(
+                        f'<div style="display: flex; align-items: center; margin-bottom: 5px;">'
+                        f'<div style="width: 20px; height: 20px; background-color: {hex_color}; '
+                        f'border: 1px solid #ccc; margin-right: 10px;"></div>'
+                        f"{sp_name} &nbsp;- {count}</div>",
+                        unsafe_allow_html=True,
+                    )
 
         return filtered_df
 
