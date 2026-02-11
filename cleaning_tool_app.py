@@ -66,9 +66,11 @@ def main(
     distance_col: str = "Distância (m)",
     n_timestamp_col: str = "Timestamp",
     height_col: str = "Altura (andares)",
+    altitude_col: str = "Altitude (m)",
     date_col: str = "Data",
     species_col: str = "Espécie",
     nest_structure_col: str = "Estrutura de nidificação",
+    bacia_col: str = "Bacia Hidrográfica",
     email_col: str = "Email",
 ):
 
@@ -152,9 +154,11 @@ def main(
             lon_col=lon_col,
             distance_col=distance_col,
             height_col=height_col,
+            altitude_col=altitude_col,
             date_col=date_col,
             species_col=species_col,
             nest_structure_col=nest_structure_col,
+            bacia_col=bacia_col,
             email_col=email_col,
         )
         # Garantir que os resultados são sempre apresentados

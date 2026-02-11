@@ -54,7 +54,11 @@ from math import asin, cos, radians, sin, sqrt
 import pandas as pd
 import streamlit as st
 
-from limpeza_de_dados.clean_google_form_data import add_detailed_location
+from limpeza_de_dados.clean_google_form_data import (
+    add_altitude,
+    add_bacia_hidrografica,
+    add_detailed_location,
+)
 
 
 def get_sorted_submission_options(df):
@@ -87,11 +91,15 @@ def create_filter_options():
         "use_andares_dif": st.sidebar.checkbox(
             "Comparação do número de andares", value=False
         ),
+        "use_altitude_dif": st.sidebar.checkbox(
+            "Comparação de altitude", value=False
+        ),
         "use_dias_dif": st.sidebar.checkbox("Comparação datas", value=False),
         "use_especie": st.sidebar.checkbox("Mesma espécie?", value=False),
         "use_estrutura": st.sidebar.checkbox(
             "Mesma estrutura de nidificação?", value=False
         ),
+        "use_bacia": st.sidebar.checkbox("Mesma bacia hidrográfica?", value=False),
         "use_utilizador": st.sidebar.checkbox("Mesmo utilizador?", value=False),
     }
 
@@ -110,6 +118,11 @@ def create_filter_parameters(filters):
     if filters["use_andares_dif"]:
         params["diff_a"] = st.sidebar.slider(
             "Diferença (andares)", min_value=0, max_value=20, value=2, step=1
+        )
+
+    if filters["use_altitude_dif"]:
+        params["diff_alt"] = st.sidebar.slider(
+            "Diferença de altitude (m)", min_value=0, max_value=500, value=50, step=10
         )
 
     if filters["use_dias_dif"]:
@@ -141,6 +154,18 @@ def apply_height_filter(filtered_df, selected_row, height_col, diff_a):
     return filtered_df[filtered_df["diff_andares"] <= diff_a]
 
 
+def apply_altitude_filter(filtered_df, selected_row, altitude_col, diff_alt):
+    """Apply altitude difference filter."""
+    if altitude_col not in filtered_df.columns:
+        return filtered_df
+    filtered_df[altitude_col] = pd.to_numeric(filtered_df[altitude_col], errors="coerce")
+    selected_alt = pd.to_numeric(selected_row.get(altitude_col), errors="coerce")
+    if pd.isna(selected_alt):
+        return filtered_df
+    filtered_df["diff_altitude"] = (filtered_df[altitude_col] - selected_alt).abs()
+    return filtered_df[filtered_df["diff_altitude"] <= diff_alt]
+
+
 def apply_date_filter(filtered_df, selected_row, date_col, diff_d):
     """Apply date difference filter."""
     filtered_df["date_dt"] = pd.to_datetime(
@@ -154,18 +179,19 @@ def apply_date_filter(filtered_df, selected_row, date_col, diff_d):
 
 
 def apply_field_filters(
-    filtered_df, selected_row, filters, species_col, nest_structure_col, email_col
+    filtered_df, selected_row, filters, species_col, nest_structure_col, bacia_col, email_col
 ):
-    """Apply exact match filters for species, structure, and user."""
+    """Apply exact match filters for species, structure, bacia, and user."""
     field_filters = [
         (species_col, filters["use_especie"]),
         (nest_structure_col, filters["use_estrutura"]),
+        (bacia_col, filters["use_bacia"]),
         (email_col, filters["use_utilizador"]),
     ]
 
     for col_name, use_filter in field_filters:
-        if use_filter:
-            filtered_df = filtered_df[filtered_df[col_name] == selected_row[col_name]]
+        if use_filter and col_name in filtered_df.columns:
+            filtered_df = filtered_df[filtered_df[col_name] == selected_row.get(col_name)]
     return filtered_df
 
 
@@ -178,9 +204,11 @@ def apply_all_filters(
     lon_col: str,
     distance_col: str,
     height_col: str,
+    altitude_col: str,
     date_col: str,
     species_col: str,
     nest_structure_col: str,
+    bacia_col: str,
     email_col: str,
 ) -> pd.DataFrame:
     # Start with validated dataset
@@ -202,6 +230,11 @@ def apply_all_filters(
             filtered_df, selected_row, height_col, filter_params["diff_a"]
         )
 
+    if filters["use_altitude_dif"]:
+        filtered_df = apply_altitude_filter(
+            filtered_df, selected_row, altitude_col, filter_params["diff_alt"]
+        )
+
     if filters["use_dias_dif"]:
         filtered_df = apply_date_filter(
             filtered_df, selected_row, date_col, filter_params["diff_d"]
@@ -209,7 +242,7 @@ def apply_all_filters(
 
     # Apply remaining field filters
     filtered_df = apply_field_filters(
-        filtered_df, selected_row, filters, species_col, nest_structure_col, email_col
+        filtered_df, selected_row, filters, species_col, nest_structure_col, bacia_col, email_col
     )
 
     return filtered_df
@@ -239,6 +272,8 @@ def get_submission_to_validate(df_new_submissions: pd.DataFrame, n_timestamp_col
         df_new_submissions[n_timestamp_col] == selected_id
     ].iloc[0]
     selected_row = add_detailed_location(selected_row)
+    selected_row = add_altitude(selected_row)
+    selected_row = add_bacia_hidrografica(selected_row)
 
     return selected_row
 

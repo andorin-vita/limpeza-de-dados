@@ -24,12 +24,43 @@ Estrutura do código:
 - Função main() com a sequência das funções a executar.
 """
 
+import functools
+import logging
+from pathlib import Path
+
+import geopandas as gpd
 import pandas as pd
+import requests
 from geopy.geocoders import Nominatim
+from shapely.geometry import Point
 
 from limpeza_de_dados.utils import split_coordinates
 
+logger = logging.getLogger(__name__)
+
 GEOLOCATOR: Nominatim = Nominatim(user_agent="my-agent")
+
+SHAPEFILE_PATH: Path = (
+    Path(__file__).resolve().parent.parent.parent
+    / "bacia-hidro"
+    / "wise_vw_surfacewaterbody_basin_ptcont.shp"
+)
+
+OPEN_METEO_ELEVATION_URL: str = "https://api.open-meteo.com/v1/elevation"
+
+
+@functools.lru_cache(maxsize=1)
+def _load_bacias_gdf() -> gpd.GeoDataFrame | None:
+    """Load the surface water body basins shapefile (cached after first call)."""
+    try:
+        gdf = gpd.read_file(SHAPEFILE_PATH)
+        logger.info("Loaded %d basin polygons from %s", len(gdf), SHAPEFILE_PATH)
+        return gdf
+    except Exception:
+        logger.warning("Could not load shapefile at %s", SHAPEFILE_PATH, exc_info=True)
+        return None
+
+
 CONVERSION: dict[str, str] = {
     "Código": "Código",
     "Nº de registo": "Nº de registo",
@@ -41,6 +72,9 @@ CONVERSION: dict[str, str] = {
     "Distrito": "Distrito",
     "Concelho": "Concelho",
     "Freguesia": "Freguesia",
+    "Altitude (m)": "Altitude (m)",
+    "Região Hidrográfica": "Região Hidrográfica",
+    "Bacia Hidrográfica": "Bacia Hidrográfica",
     "Estrutura de nidificação": "Estrutura de nidificação",
     "Número de ninhos": "Nº ninhos ocupados",
     "Altura média (em andares) dos ninhos?": "Altura (andares)",
@@ -93,6 +127,86 @@ def add_detailed_location(row: pd.Series, geolocator=GEOLOCATOR):
     except Exception:
         pass
     return row
+
+
+def add_altitude(row: pd.Series) -> pd.Series:
+    """Add altitude (elevation in metres) from the Open-Meteo Elevation API."""
+    row["Altitude (m)"] = None
+    try:
+        lat = float(row["Latitude"])
+        lon = float(row["Longitude"])
+        response = requests.get(
+            OPEN_METEO_ELEVATION_URL,
+            params={"latitude": lat, "longitude": lon},
+            timeout=10,
+        )
+        response.raise_for_status()
+        row["Altitude (m)"] = response.json()["elevation"][0]
+    except Exception:
+        logger.warning("Could not fetch altitude for (%s, %s)", row.get("Latitude"), row.get("Longitude"), exc_info=True)
+    return row
+
+
+def add_bacia_hidrografica(row: pd.Series, bacias_gdf: gpd.GeoDataFrame | None = None) -> pd.Series:
+    """Add Região Hidrográfica and Bacia Hidrográfica via point-in-polygon lookup."""
+    row["Região Hidrográfica"] = None
+    row["Bacia Hidrográfica"] = None
+
+    if bacias_gdf is None:
+        bacias_gdf = _load_bacias_gdf()
+
+    if bacias_gdf is None:
+        return row
+
+    try:
+        point = Point(float(row["Longitude"]), float(row["Latitude"]))
+        for _, bacia in bacias_gdf.iterrows():
+            if bacia.geometry.contains(point):
+                row["Região Hidrográfica"] = bacia["regiao_hid"]
+                row["Bacia Hidrográfica"] = bacia["nome"]
+                break
+    except Exception:
+        logger.warning("Could not determine bacia for (%s, %s)", row.get("Latitude"), row.get("Longitude"), exc_info=True)
+    return row
+
+
+def get_altitudes_batch(lats: list[float], lons: list[float]) -> list[float | None]:
+    """Fetch altitudes for multiple coordinates in a single API call (batch mode)."""
+    try:
+        lat_str = ",".join(str(x) for x in lats)
+        lon_str = ",".join(str(x) for x in lons)
+        response = requests.get(
+            OPEN_METEO_ELEVATION_URL,
+            params={"latitude": lat_str, "longitude": lon_str},
+            timeout=30,
+        )
+        response.raise_for_status()
+        return response.json()["elevation"]
+    except Exception:
+        logger.warning("Batch altitude request failed", exc_info=True)
+        return [None] * len(lats)
+
+
+def get_bacias_batch(df: pd.DataFrame, bacias_gdf: gpd.GeoDataFrame | None = None) -> pd.DataFrame:
+    """Assign Região Hidrográfica and Bacia Hidrográfica to all rows via spatial join."""
+    if bacias_gdf is None:
+        bacias_gdf = _load_bacias_gdf()
+
+    if bacias_gdf is None:
+        df["Região Hidrográfica"] = None
+        df["Bacia Hidrográfica"] = None
+        return df
+
+    geometry = [
+        Point(lon, lat)
+        for lon, lat in zip(df["Longitude"], df["Latitude"])
+    ]
+    colonies_gdf = gpd.GeoDataFrame(df, geometry=geometry, crs="EPSG:4326")
+    result = gpd.sjoin(colonies_gdf, bacias_gdf, how="left", predicate="within")
+
+    df["Região Hidrográfica"] = result["regiao_hid"].values
+    df["Bacia Hidrográfica"] = result["nome"].values
+    return df
 
 
 def convert_datatypes(df: pd.DataFrame):
