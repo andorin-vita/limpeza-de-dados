@@ -143,11 +143,18 @@ def add_altitude(row: pd.Series) -> pd.Series:
         response.raise_for_status()
         row["Altitude (m)"] = response.json()["elevation"][0]
     except Exception:
-        logger.warning("Could not fetch altitude for (%s, %s)", row.get("Latitude"), row.get("Longitude"), exc_info=True)
+        logger.warning(
+            "Could not fetch altitude for (%s, %s)",
+            row.get("Latitude"),
+            row.get("Longitude"),
+            exc_info=True,
+        )
     return row
 
 
-def add_bacia_hidrografica(row: pd.Series, bacias_gdf: gpd.GeoDataFrame | None = None) -> pd.Series:
+def add_bacia_hidrografica(
+    row: pd.Series, bacias_gdf: gpd.GeoDataFrame | None = None
+) -> pd.Series:
     """Add Região Hidrográfica and Bacia Hidrográfica via point-in-polygon lookup."""
     row["Região Hidrográfica"] = None
     row["Bacia Hidrográfica"] = None
@@ -166,7 +173,12 @@ def add_bacia_hidrografica(row: pd.Series, bacias_gdf: gpd.GeoDataFrame | None =
                 row["Bacia Hidrográfica"] = bacia["nome"]
                 break
     except Exception:
-        logger.warning("Could not determine bacia for (%s, %s)", row.get("Latitude"), row.get("Longitude"), exc_info=True)
+        logger.warning(
+            "Could not determine bacia for (%s, %s)",
+            row.get("Latitude"),
+            row.get("Longitude"),
+            exc_info=True,
+        )
     return row
 
 
@@ -187,7 +199,9 @@ def get_altitudes_batch(lats: list[float], lons: list[float]) -> list[float | No
         return [None] * len(lats)
 
 
-def get_bacias_batch(df: pd.DataFrame, bacias_gdf: gpd.GeoDataFrame | None = None) -> pd.DataFrame:
+def get_bacias_batch(
+    df: pd.DataFrame, bacias_gdf: gpd.GeoDataFrame | None = None
+) -> pd.DataFrame:
     """Assign Região Hidrográfica and Bacia Hidrográfica to all rows via spatial join."""
     if bacias_gdf is None:
         bacias_gdf = _load_bacias_gdf()
@@ -197,10 +211,7 @@ def get_bacias_batch(df: pd.DataFrame, bacias_gdf: gpd.GeoDataFrame | None = Non
         df["Bacia Hidrográfica"] = None
         return df
 
-    geometry = [
-        Point(lon, lat)
-        for lon, lat in zip(df["Longitude"], df["Latitude"])
-    ]
+    geometry = [Point(lon, lat) for lon, lat in zip(df["Longitude"], df["Latitude"])]
     colonies_gdf = gpd.GeoDataFrame(df, geometry=geometry, crs="EPSG:4326")
     result = gpd.sjoin(colonies_gdf, bacias_gdf, how="left", predicate="within")
 

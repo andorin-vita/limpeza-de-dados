@@ -389,9 +389,7 @@ def create_map_sidebar(
         bacia_selected = []
         has_bacia = bacia_hid_col in df.columns and df[bacia_hid_col].notna().any()
         if has_bacia:
-            bacia_options = sorted(
-                df[bacia_hid_col].dropna().unique(), key=unidecode
-            )
+            bacia_options = sorted(df[bacia_hid_col].dropna().unique(), key=unidecode)
             bacia_selected = st.multiselect(
                 label="Bacia Hidrográfica",
                 options=bacia_options,
@@ -436,7 +434,11 @@ def create_map_sidebar(
                 & (filtered_df["Year"] <= years_selected[1])
             ]
 
-        if has_altitude and altitude_selected and altitude_selected != (alt_min, alt_max):
+        if (
+            has_altitude
+            and altitude_selected
+            and altitude_selected != (alt_min, alt_max)
+        ):
             filtered_df = filtered_df[
                 filtered_df[altitude_col].notna()
                 & (filtered_df[altitude_col] >= altitude_selected[0])
@@ -444,9 +446,7 @@ def create_map_sidebar(
             ]
 
         if bacia_selected:
-            filtered_df = filtered_df[
-                filtered_df[bacia_hid_col].isin(bacia_selected)
-            ]
+            filtered_df = filtered_df[filtered_df[bacia_hid_col].isin(bacia_selected)]
 
         # Build legend based on filtered data: only species present + count
         filtered_species_counts = (

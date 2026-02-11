@@ -91,9 +91,7 @@ def create_filter_options():
         "use_andares_dif": st.sidebar.checkbox(
             "Comparação do número de andares", value=False
         ),
-        "use_altitude_dif": st.sidebar.checkbox(
-            "Comparação de altitude", value=False
-        ),
+        "use_altitude_dif": st.sidebar.checkbox("Comparação de altitude", value=False),
         "use_dias_dif": st.sidebar.checkbox("Comparação datas", value=False),
         "use_especie": st.sidebar.checkbox("Mesma espécie?", value=False),
         "use_estrutura": st.sidebar.checkbox(
@@ -158,7 +156,9 @@ def apply_altitude_filter(filtered_df, selected_row, altitude_col, diff_alt):
     """Apply altitude difference filter."""
     if altitude_col not in filtered_df.columns:
         return filtered_df
-    filtered_df[altitude_col] = pd.to_numeric(filtered_df[altitude_col], errors="coerce")
+    filtered_df[altitude_col] = pd.to_numeric(
+        filtered_df[altitude_col], errors="coerce"
+    )
     selected_alt = pd.to_numeric(selected_row.get(altitude_col), errors="coerce")
     if pd.isna(selected_alt):
         return filtered_df
@@ -179,7 +179,13 @@ def apply_date_filter(filtered_df, selected_row, date_col, diff_d):
 
 
 def apply_field_filters(
-    filtered_df, selected_row, filters, species_col, nest_structure_col, bacia_col, email_col
+    filtered_df,
+    selected_row,
+    filters,
+    species_col,
+    nest_structure_col,
+    bacia_col,
+    email_col,
 ):
     """Apply exact match filters for species, structure, bacia, and user."""
     field_filters = [
@@ -191,7 +197,9 @@ def apply_field_filters(
 
     for col_name, use_filter in field_filters:
         if use_filter and col_name in filtered_df.columns:
-            filtered_df = filtered_df[filtered_df[col_name] == selected_row.get(col_name)]
+            filtered_df = filtered_df[
+                filtered_df[col_name] == selected_row.get(col_name)
+            ]
     return filtered_df
 
 
@@ -242,7 +250,13 @@ def apply_all_filters(
 
     # Apply remaining field filters
     filtered_df = apply_field_filters(
-        filtered_df, selected_row, filters, species_col, nest_structure_col, bacia_col, email_col
+        filtered_df,
+        selected_row,
+        filters,
+        species_col,
+        nest_structure_col,
+        bacia_col,
+        email_col,
     )
 
     return filtered_df
