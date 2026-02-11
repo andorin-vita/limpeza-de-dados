@@ -32,6 +32,9 @@ COLS_TO_USE: list[str] = [
     "Distrito",
     "Concelho",
     "Freguesia",
+    "Altitude (m)",
+    "Região Hidrográfica",
+    "Bacia Hidrográfica",
     "Estrutura de nidificação",
     "Nº ninhos ocupados",
     "Altura (andares)",
@@ -48,6 +51,9 @@ COLS_TOOLTIP: list[str] = [
     "Distrito",
     "Concelho",
     "Freguesia",
+    "Altitude (m)",
+    "Região Hidrográfica",
+    "Bacia Hidrográfica",
     "Estrutura de nidificação",
     "Nº ninhos ocupados",
     "Altura (andares)",
@@ -148,7 +154,9 @@ def load_data(
     remove_if_not_identified: bool = True,
 ):
     df = read_spreadsheet_as_df(url=url, gc=gc)
-    df = df[cols_to_use]
+    # Only select columns that exist (new columns may not be in older data)
+    available_cols = [col for col in cols_to_use if col in df.columns]
+    df = df[available_cols]
     if df.empty:
         return df
     df = df.dropna(subset=[lat_col, lon_col])
@@ -287,6 +295,9 @@ def create_map_sidebar(
     districts_col: str = "Distrito",
     concelho_col: str = "Concelho",
     freguesia_col: str = "Freguesia",
+    altitude_col: str = "Altitude (m)",
+    regiao_hid_col: str = "Região Hidrográfica",
+    bacia_hid_col: str = "Bacia Hidrográfica",
     year_col: str = "Year",
 ):
 
@@ -358,6 +369,33 @@ def create_map_sidebar(
             key="freguesia_filter",
         )
 
+        # Altitude filter (only if column exists in data)
+        altitude_selected = None
+        has_altitude = altitude_col in df.columns and df[altitude_col].notna().any()
+        if has_altitude:
+            alt_values = df[altitude_col].dropna()
+            alt_min = int(alt_values.min())
+            alt_max = int(alt_values.max())
+            if alt_min < alt_max:
+                altitude_selected = st.slider(
+                    label="Altitude (m)",
+                    min_value=alt_min,
+                    max_value=alt_max,
+                    value=(alt_min, alt_max),
+                    key="altitude_filter",
+                )
+
+        # Bacia Hidrográfica filter (only if column exists in data)
+        bacia_selected = []
+        has_bacia = bacia_hid_col in df.columns and df[bacia_hid_col].notna().any()
+        if has_bacia:
+            bacia_options = sorted(df[bacia_hid_col].dropna().unique(), key=unidecode)
+            bacia_selected = st.multiselect(
+                label="Bacia Hidrográfica",
+                options=bacia_options,
+                key="bacia_hid_filter",
+            )
+
         # Apply filters immediately (no submit button needed)
         filtered_df: pd.DataFrame = deepcopy(df)
 
@@ -395,6 +433,20 @@ def create_map_sidebar(
                 (filtered_df["Year"] >= years_selected[0])
                 & (filtered_df["Year"] <= years_selected[1])
             ]
+
+        if (
+            has_altitude
+            and altitude_selected
+            and altitude_selected != (alt_min, alt_max)
+        ):
+            filtered_df = filtered_df[
+                filtered_df[altitude_col].notna()
+                & (filtered_df[altitude_col] >= altitude_selected[0])
+                & (filtered_df[altitude_col] <= altitude_selected[1])
+            ]
+
+        if bacia_selected:
+            filtered_df = filtered_df[filtered_df[bacia_hid_col].isin(bacia_selected)]
 
         # Build legend based on filtered data: only species present + count
         filtered_species_counts = (

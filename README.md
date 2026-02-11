@@ -16,6 +16,17 @@ Este projeto tem como objetivo facilitar a limpeza, organização e visualizaç�
 - `create_maps_clusters.py`: Streamlit app para visualização dos dados validados usando mapas de clusters
 - `create_maps.py`: Streamlit app para visualização dos dados validados usando mapas de pontos
 
+### Informação Geográfica
+
+A informação geográfica de cada colónia é obtida automaticamente a partir das coordenadas (Latitude, Longitude):
+
+| Informação | Fonte | Método |
+|---|---|---|
+| Distrito, Concelho, Freguesia | Nominatim / OpenStreetMap | Reverse geocoding (`geopy`) |
+| Altitude (m) | Open-Meteo Elevation API | Pedido HTTP por coordenada |
+| Região Hidrográfica, Bacia Hidrográfica | Shapefile APA (bacias de Portugal Continental) | Point-in-polygon (`geopandas`) |
+
+
 ### Como instalar
 1. Instalar Python 3.12
 2. Instalar as dependências de `requirements.txt` (mais informações sobre como instalar dependências abaixo)
