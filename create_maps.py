@@ -311,21 +311,29 @@ def create_map_sidebar(
             label="Espécie", options=species_cmap.keys(), key="species-filter"
         )
 
-        years_selected: tuple = st.slider(
-            label="Ano",
-            min_value=int(year[0]),
-            max_value=int(year[-1]),
-            value=(int(year[0]), int(year[-1])),
-            key="year_filter",
-        )
+        if int(year[0]) < int(year[-1]):
+            years_selected: tuple = st.slider(
+                label="Ano",
+                min_value=int(year[0]),
+                max_value=int(year[-1]),
+                value=(int(year[0]), int(year[-1])),
+                key="year_filter",
+            )
+        else:
+            st.write(f"**Ano:** {int(year[0])}")
+            years_selected: tuple = (int(year[0]), int(year[0]))
 
-        n_nests_selected: tuple = st.slider(
-            label="Nº de ninhos",
-            min_value=int(n_nests[0]),
-            max_value=int(n_nests[-1]),
-            value=(int(n_nests[0]), int(n_nests[-1])),
-            key="nests_filter",
-        )
+        if int(n_nests[0]) < int(n_nests[-1]):
+            n_nests_selected: tuple = st.slider(
+                label="Nº de ninhos",
+                min_value=int(n_nests[0]),
+                max_value=int(n_nests[-1]),
+                value=(int(n_nests[0]), int(n_nests[-1])),
+                key="nests_filter",
+            )
+        else:
+            st.write(f"**Nº de ninhos:** {int(n_nests[0])}")
+            n_nests_selected: tuple = (int(n_nests[0]), int(n_nests[0]))
 
         # Geographic filters with cascading logic
         districts_selected: list[str] = st.multiselect(
