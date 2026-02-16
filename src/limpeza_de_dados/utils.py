@@ -1,73 +1,40 @@
 from copy import deepcopy
-
+import re
 import numpy as np
 import pandas as pd
 
 
-def save_clean_data(path: str, df: pd.DataFrame) -> None:
-    df.to_csv(path, index=False)
-
-
-def split_coordinates(
-    df: pd.DataFrame,
-    original_col: str = "Coordenadas",
-    lat_col: str = "Latitude",
-    lon_col: str = "Longitude",
+def separar_coordenadas(
+    dataframe: pd.DataFrame,
+    coluna_coordenadas: str = "Coordenadas",
+    coluna_latitude: str = "Latitude",
+    coluna_longitude: str = "Longitude",
 ) -> pd.DataFrame:
-    if not df.empty:
+    """
+    Separa uma coluna de coordenadas em colunas de latitude e longitude.
+
+    Parâmetros:
+        dataframe (pd.DataFrame): DataFrame contendo a coluna de coordenadas.
+        coluna_coordenadas (str): Nome da coluna com as coordenadas no formato "latitude,longitude".
+        coluna_latitude (str): Nome da nova coluna para armazenar as latitudes.
+        coluna_longitude (str): Nome da nova coluna para armazenar as longitudes.
+
+    Retorna:
+        pd.DataFrame: DataFrame com as novas colunas de latitude e longitude.
+    """
+    if not dataframe.empty:
         latitudes = []
         longitudes = []
-        for _, row in df.iterrows():
+        for _, row in dataframe.iterrows():
             try:
-                lat, lon = row[original_col].split(",")
+                latitude, longitude = row[coluna_coordenadas].split(",")
             except Exception:
-                lat, lon = (np.nan, np.nan)
-            latitudes.append(lat)
-            longitudes.append(lon)
-        df[lat_col] = pd.to_numeric(latitudes, errors="coerce")
-        df[lon_col] = pd.to_numeric(longitudes, errors="coerce")
-    return df
-
-
-def assign_nest_id(
-    df: pd.DataFrame,
-    lat_col: str = "Latitude",
-    lon_col: str = "Longitude",
-    register_number_col: str = "Nº de registo",
-    new_id_col: str = "ID da colónia",
-) -> pd.DataFrame:
-    df[new_id_col] = (
-        df.groupby([lat_col, lon_col])[register_number_col]
-        .transform("min")
-        .astype("Int64")
-    )
-    return df
-
-
-def count_values_by_label(
-    df: pd.DataFrame,
-    label_col: str,
-    filter_data: dict[str, list[str]],
-    nest_id_col: str = "ID da colónia",
-    drop_duplicated_colony_id: bool = True,
-    normalize: bool = True,
-    multiplier: int = 100,
-) -> pd.Series:
-
-    new_df = deepcopy(df)
-    if drop_duplicated_colony_id:
-        new_df = new_df.drop_duplicates(subset=[nest_id_col], keep="first")
-
-    mask: pd.Series = pd.Series(True, index=new_df.index)
-    for key, values in filter_data.items():
-        mask &= new_df[key].isin(values)
-
-    filtered_df: pd.Series = new_df[mask]
-    return filtered_df[label_col].value_counts(normalize=normalize) * multiplier
-
-
-def filter_small_values(series: pd.Series, min_value: float):
-    return series[series >= min_value]
+                latitude, longitude = (np.nan, np.nan)
+            latitudes.append(latitude)
+            longitudes.append(longitude)
+        dataframe[coluna_latitude] = pd.to_numeric(latitudes, errors="coerce")
+        dataframe[coluna_longitude] = pd.to_numeric(longitudes, errors="coerce")
+    return dataframe
 
 
 def find_new_entries(
@@ -76,22 +43,147 @@ def find_new_entries(
     return df_raw[~df_raw[unique_col].isin(df_analysis[unique_col])]
 
 
-def replace_values_in_col(
+def salvar_dados_limpos(caminho_arquivo: str, dataframe_limpo: pd.DataFrame) -> None:
+    # NOTA: Esta função não está a ser utilizada atualmente no projeto.
+    """
+    Salva um DataFrame limpo em um arquivo CSV.
+
+    Parâmetros:
+        caminho_arquivo (str): Caminho completo onde o arquivo CSV será salvo.
+        dataframe_limpo (pd.DataFrame): DataFrame contendo os dados limpos a serem salvos.
+    """
+    dataframe_limpo.to_csv(caminho_arquivo, index=False)
+
+
+def atribuir_id_colonia(
     df: pd.DataFrame,
-    col: str = "Estrutura de nidificação",
-    replacement: tuple[str, str] = (
+    coluna_latitude: str = "Latitude",
+    coluna_longitude: str = "Longitude",
+    coluna_numero_registo: str = "Nº de registo",
+    coluna_novo_id: str = "ID da colónia",
+) -> pd.DataFrame:
+    # NOTA: Esta função não está a ser utilizada atualmente no projeto.
+    """
+    Atribui um identificador de colónia com base na localização geográfica.
+
+    Para cada conjunto de registos que partilham a mesma Latitude e Longitude,
+    é atribuído como ID da colónia o menor valor encontrado na coluna do número de registo.
+
+    Parâmetros:
+        df (pd.DataFrame): DataFrame que contém os dados.
+        coluna_latitude (str): Nome da coluna que contém os valores de latitude.
+        coluna_longitude (str): Nome da coluna que contém os valores de longitude.
+        coluna_numero_registo (str): Nome da coluna que contém o número de registo.
+        coluna_novo_id (str): Nome da nova coluna onde será guardado o ID da colónia.
+
+    Retorna:
+        pd.DataFrame: DataFrame com a nova coluna de ID da colónia adicionada.
+    """
+
+    df[coluna_novo_id] = (
+        df.groupby([coluna_latitude, coluna_longitude])[coluna_numero_registo]
+        .transform("min")
+        .astype("Int64")
+    )
+
+    return df
+
+
+def contar_valores_por_categoria(
+    dataframe: pd.DataFrame,
+    coluna_da_categoria: str,
+    filtros: dict[str, list[str]],
+    coluna_id_colonia: str = "ID da colónia",
+    remover_duplicados_colonia: bool = True,
+    normalizar: bool = True,
+    multiplicador: int = 100,
+) -> pd.Series:
+    # NOTA: Esta função não está a ser utilizada atualmente no projeto.
+    """
+    Conta a frequência de valores em uma coluna (categoria), aplicando filtros e opções de normalização.
+
+    Parâmetros:
+        dataframe (pd.DataFrame): DataFrame a ser analisado.
+        coluna_da_categoria (str): Nome da coluna cujos valores serão contados.
+        filtros (dict[str, list[str]]): Dicionário com filtros a aplicar nas colunas.
+        coluna_id_colonia (str): Nome da coluna de identificação da colónia para remoção de duplicados.
+        remover_duplicados_colonia (bool): Se True, remove duplicados com base na coluna de colónia.
+        normalizar (bool): Se True, retorna proporção em vez de contagem absoluta.
+        multiplicador (int): Valor pelo qual multiplicar o resultado (ex: 100 para percentagem).
+
+    Retorna:
+        pd.Series: Série com a contagem (ou percentagem) dos valores da coluna filtrada.
+    """
+    new_df = deepcopy(dataframe)
+    if remover_duplicados_colonia:
+        new_df = new_df.drop_duplicates(subset=[coluna_id_colonia], keep="first")
+
+    mascara: pd.Series = pd.Series(True, index=new_df.index)
+    for chave, valores in filtros.items():
+        mascara &= new_df[chave].isin(valores)
+
+    df_filtrado: pd.DataFrame = new_df[mascara]
+    resultado = df_filtrado[coluna_da_categoria].value_counts(normalize=normalizar) * multiplicador
+    return resultado
+
+
+def filtrar_valores_pequenos(serie: pd.Series, valor_minimo: float) -> pd.Series:
+    # NOTA: Esta função não está a ser utilizada atualmente no projeto.
+    """
+    Filtra valores de uma série, mantendo apenas aqueles maiores ou iguais ao valor mínimo especificado.
+
+    Parâmetros:
+        serie (pd.Series): Série de dados a ser filtrada.
+        valor_minimo (float): Valor mínimo para manter na série.
+
+    Retorna:
+        pd.Series: Série contendo apenas os valores maiores ou iguais ao valor mínimo.
+    """
+    return serie[serie >= valor_minimo]
+
+
+def substituir_valores_na_coluna(
+    dataframe: pd.DataFrame,
+    coluna: str = "Estrutura de nidificação",
+    substituicao: tuple[str, str] = (
         "Edifício de apoio (arrecadação, garagem, etc.)",
         "Ed. de apoio",
     ),
 ) -> pd.DataFrame:
-    df[col] = df[col].replace({replacement[0]: replacement[1]})
-    return df
+    # NOTA: Esta função não está a ser utilizada atualmente no projeto.
+    """
+    Substitui valores específicos em uma coluna de um DataFrame por outro valor.
+
+    Parâmetros:
+        dataframe (pd.DataFrame): DataFrame a ser processado.
+        coluna (str): Nome da coluna onde será feita a substituição.
+        substituicao (tuple[str, str]): Tuplo com o valor original e o novo valor para substituição.
+
+    Retorna:
+        pd.DataFrame: DataFrame com os valores substituídos na coluna especificada.
+    """
+    dataframe[coluna] = dataframe[coluna].replace({substituicao[0]: substituicao[1]})
+    return dataframe
 
 
-def trim_empty_spaces(df: pd.DataFrame, cols_to_trim: list[str] | None = None):
-    if not cols_to_trim:
-        cols_to_trim = df.columns
-    df[cols_to_trim] = df[cols_to_trim].apply(
-        lambda x: x.str.strip() if x.dtype == "object" else x
-    )
-    return df
+def remover_espacos_extras(dataframe: pd.DataFrame, colunas: list[str] | None = None) -> pd.DataFrame:
+    # NOTA: Esta função não está a ser utilizada atualmente no projeto.
+    """
+    Remove espaços em branco no início, fim e múltiplos espaços consecutivos entre palavras, deixando apenas um espaço, em colunas selecionadas de um DataFrame.
+
+    Parâmetros:
+        dataframe (pd.DataFrame): DataFrame a ser processado.
+        colunas (list[str] | None): Lista de colunas para remover espaços. Se None, aplica a todas as colunas.
+
+    Retorna:
+        pd.DataFrame: DataFrame com os valores de texto das colunas selecionadas sem espaços em branco nas extremidades e com apenas um espaço entre palavras.
+    """
+    if colunas is None:
+        colunas = dataframe.columns
+    dataframe = dataframe.copy()
+    for coluna in colunas:
+        if dataframe[coluna].dtype == "object":
+            dataframe[coluna] = dataframe[coluna].apply(
+                lambda x: re.sub(r'\s+', ' ', x.strip()) if isinstance(x, str) else x
+            )
+    return dataframe

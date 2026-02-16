@@ -1,5 +1,41 @@
-.env
+.env                    # local environment variables (secrets)
+.env.*.local            # local env variants
+
+# Virtual environments
 .venv/
-**/__pycache__/*
+
+# Streamlit
+.streamlit/
+.streamlit/secrets.toml  # Streamlit secrets file
+
+# Project config / local data (keep out of repo if they contain secrets)
 config/
 dados/
+
+# Python compiled files
+__pycache__/
+*.pyc
+
+# Jupyter
+.ipynb_checkpoints
+
+# Test / typecheck caches
+.pytest_cache/
+.mypy_cache/
+
+# Editor / IDE
+.vscode/
+.idea/
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Build / distribution
+build/
+dist/
+*.egg-info/
+
+# Coverage reports
+.coverage
+htmlcov/

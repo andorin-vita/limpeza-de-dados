@@ -34,7 +34,7 @@ import requests
 from geopy.geocoders import Nominatim
 from shapely.geometry import Point
 
-from limpeza_de_dados.utils import split_coordinates
+from limpeza_de_dados.utils import separar_coordenadas
 
 logger = logging.getLogger(__name__)
 
@@ -248,7 +248,7 @@ def add_missing_data_col(df: pd.DataFrame, missing_data_col: str = "Dados em Fal
 
 
 def full_clean_data(df_raw: pd.DataFrame):
-    df = split_coordinates(df_raw)
+    df = separar_coordenadas(df_raw)
     df = convert_datatypes(df)
     df = add_code_col(df)
     df = add_missing_data_col(df)
