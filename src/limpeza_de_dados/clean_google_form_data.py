@@ -42,8 +42,8 @@ GEOLOCATOR: Nominatim = Nominatim(user_agent="my-agent")
 
 SHAPEFILE_PATH: Path = (
     Path(__file__).resolve().parent.parent.parent
-    / "bacia-hidro"
-    / "wise_vw_surfacewaterbody_basin_ptcont.shp"
+    / "bacias-hidrograficas-principais"
+    / "bacias_SNIRH.shp"
 )
 
 OPEN_METEO_ELEVATION_URL: str = "https://api.open-meteo.com/v1/elevation"
@@ -51,9 +51,10 @@ OPEN_METEO_ELEVATION_URL: str = "https://api.open-meteo.com/v1/elevation"
 
 @functools.lru_cache(maxsize=1)
 def _load_bacias_gdf() -> gpd.GeoDataFrame | None:
-    """Load the surface water body basins shapefile (cached after first call)."""
+    """Load the principal basins shapefile (cached after first call)."""
     try:
         gdf = gpd.read_file(SHAPEFILE_PATH)
+        gdf = gdf.to_crs("EPSG:4326")
         logger.info("Loaded %d basin polygons from %s", len(gdf), SHAPEFILE_PATH)
         return gdf
     except Exception:
@@ -73,7 +74,6 @@ CONVERSION: dict[str, str] = {
     "Concelho": "Concelho",
     "Freguesia": "Freguesia",
     "Altitude (m)": "Altitude (m)",
-    "Região Hidrográfica": "Região Hidrográfica",
     "Bacia Hidrográfica": "Bacia Hidrográfica",
     "Estrutura de nidificação": "Estrutura de nidificação",
     "Número de ninhos": "Nº ninhos ocupados",
@@ -155,8 +155,7 @@ def add_altitude(row: pd.Series) -> pd.Series:
 def add_bacia_hidrografica(
     row: pd.Series, bacias_gdf: gpd.GeoDataFrame | None = None
 ) -> pd.Series:
-    """Add Região Hidrográfica and Bacia Hidrográfica via point-in-polygon lookup."""
-    row["Região Hidrográfica"] = None
+    """Add Bacia Hidrográfica via point-in-polygon lookup."""
     row["Bacia Hidrográfica"] = None
 
     if bacias_gdf is None:
@@ -169,9 +168,10 @@ def add_bacia_hidrografica(
         point = Point(float(row["Longitude"]), float(row["Latitude"]))
         for _, bacia in bacias_gdf.iterrows():
             if bacia.geometry.contains(point):
-                row["Região Hidrográfica"] = bacia["regiao_hid"]
-                row["Bacia Hidrográfica"] = bacia["nome"]
+                row["Bacia Hidrográfica"] = bacia["NOME"]
                 break
+        else:
+            row["Bacia Hidrográfica"] = "Não aplicável"
     except Exception:
         logger.warning(
             "Could not determine bacia for (%s, %s)",
@@ -202,12 +202,11 @@ def get_altitudes_batch(lats: list[float], lons: list[float]) -> list[float | No
 def get_bacias_batch(
     df: pd.DataFrame, bacias_gdf: gpd.GeoDataFrame | None = None
 ) -> pd.DataFrame:
-    """Assign Região Hidrográfica and Bacia Hidrográfica to all rows via spatial join."""
+    """Assign Bacia Hidrográfica to all rows via spatial join."""
     if bacias_gdf is None:
         bacias_gdf = _load_bacias_gdf()
 
     if bacias_gdf is None:
-        df["Região Hidrográfica"] = None
         df["Bacia Hidrográfica"] = None
         return df
 
@@ -215,8 +214,7 @@ def get_bacias_batch(
     colonies_gdf = gpd.GeoDataFrame(df, geometry=geometry, crs="EPSG:4326")
     result = gpd.sjoin(colonies_gdf, bacias_gdf, how="left", predicate="within")
 
-    df["Região Hidrográfica"] = result["regiao_hid"].values
-    df["Bacia Hidrográfica"] = result["nome"].values
+    df["Bacia Hidrográfica"] = result["NOME"].fillna("Não aplicável").values
     return df
 
 

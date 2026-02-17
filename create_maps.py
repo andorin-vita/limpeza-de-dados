@@ -33,7 +33,6 @@ COLS_TO_USE: list[str] = [
     "Concelho",
     "Freguesia",
     "Altitude (m)",
-    "Região Hidrográfica",
     "Bacia Hidrográfica",
     "Estrutura de nidificação",
     "Nº ninhos ocupados",
@@ -290,7 +289,6 @@ def create_map_sidebar(
     concelho_col: str = "Concelho",
     freguesia_col: str = "Freguesia",
     altitude_col: str = "Altitude (m)",
-    regiao_hid_col: str = "Região Hidrográfica",
     bacia_hid_col: str = "Bacia Hidrográfica",
     year_col: str = "Year",
 ):

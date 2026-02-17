@@ -1,5 +1,6 @@
-from copy import deepcopy
 import re
+from copy import deepcopy
+
 import numpy as np
 import pandas as pd
 
@@ -123,7 +124,10 @@ def contar_valores_por_categoria(
         mascara &= new_df[chave].isin(valores)
 
     df_filtrado: pd.DataFrame = new_df[mascara]
-    resultado = df_filtrado[coluna_da_categoria].value_counts(normalize=normalizar) * multiplicador
+    resultado = (
+        df_filtrado[coluna_da_categoria].value_counts(normalize=normalizar)
+        * multiplicador
+    )
     return resultado
 
 
@@ -166,7 +170,9 @@ def substituir_valores_na_coluna(
     return dataframe
 
 
-def remover_espacos_extras(dataframe: pd.DataFrame, colunas: list[str] | None = None) -> pd.DataFrame:
+def remover_espacos_extras(
+    dataframe: pd.DataFrame, colunas: list[str] | None = None
+) -> pd.DataFrame:
     # NOTA: Esta função não está a ser utilizada atualmente no projeto.
     """
     Remove espaços em branco no início, fim e múltiplos espaços consecutivos entre palavras, deixando apenas um espaço, em colunas selecionadas de um DataFrame.
@@ -184,6 +190,6 @@ def remover_espacos_extras(dataframe: pd.DataFrame, colunas: list[str] | None = 
     for coluna in colunas:
         if dataframe[coluna].dtype == "object":
             dataframe[coluna] = dataframe[coluna].apply(
-                lambda x: re.sub(r'\s+', ' ', x.strip()) if isinstance(x, str) else x
+                lambda x: re.sub(r"\s+", " ", x.strip()) if isinstance(x, str) else x
             )
     return dataframe
