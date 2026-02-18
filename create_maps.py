@@ -474,6 +474,10 @@ def create_map_sidebar(
 if __name__ == "__main__":
     st.set_page_config(layout="wide")
 
+    if st.sidebar.button("🔄 Atualizar dados"):
+        st.cache_data.clear()
+        st.rerun()
+
     # === Indica aqui o caminho do teu ficheiro CSV ===
     df: pd.DataFrame = load_data()
 

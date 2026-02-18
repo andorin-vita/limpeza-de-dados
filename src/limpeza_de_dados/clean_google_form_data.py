@@ -63,7 +63,6 @@ def _load_bacias_gdf() -> gpd.GeoDataFrame | None:
 
 
 CONVERSION: dict[str, str] = {
-    "Código": "Código",
     "Nº de registo": "Nº de registo",
     "ID da colónia": "ID da colónia",
     "Espécie": "Espécie",
@@ -73,20 +72,99 @@ CONVERSION: dict[str, str] = {
     "Distrito": "Distrito",
     "Concelho": "Concelho",
     "Freguesia": "Freguesia",
-    "Altitude (m)": "Altitude (m)",
-    "Bacia Hidrográfica": "Bacia Hidrográfica",
     "Estrutura de nidificação": "Estrutura de nidificação",
     "Número de ninhos": "Nº ninhos ocupados",
     "Altura média (em andares) dos ninhos?": "Altura (andares)",
+    "Edifício ou estrutura em uso ou abandonada?": "Estado da estrutura",
+    "Onde estão os ninhos?": "Local de nidificação",
     "Data da observação?": "Data",
     "Nome": "Nome",
     "Endereço de email": "Email",
     "Comentários": "Comentários",
     "Dados em Falta": "Dados em Falta",
     "Carimbo de data/hora": "Timestamp",
-    "Edifício ou estrutura em uso ou abandonada?": "Estado da estrutura",
-    "Onde estão os ninhos?": "Local de nidificação",
-    "Carregue um vídeo, fotografia ou áudio": "Media",
+    "Carregue um vídeo, fotografia ou áudio": "Multimedia",
+    "Altitude (m)": "Altitude (m)",
+    "Bacia Hidrográfica": "Bacia Hidrográfica",
+}
+
+SAVE_COLUMNS: list[str] = [
+    "Nº de registo",
+    "ID da colónia",
+    "Espécie",
+    "Coordenadas",
+    "Latitude",
+    "Longitude",
+    "Distrito",
+    "Concelho",
+    "Freguesia",
+    "Estrutura de nidificação",
+    "Nº ninhos ocupados",
+    "Altura (andares)",
+    "Estado da estrutura",
+    "Local de nidificação",
+    "Data",
+    "Nome",
+    "Email",
+    "Origem",
+    "Comentários",
+    "Dados em Falta",
+    "Timestamp",
+    "Multimedia",
+    "Ano de Campanha",
+    "Altitude (m)",
+    "Bacia Hidrográfica",
+    "Validação Manual",
+]
+
+DISPLAY_COLUMNS: list[str] = [
+    "Timestamp",
+    "Nome",
+    "Email",
+    "Nº de registo",
+    "ID da colónia",
+    "Data",
+    "Espécie",
+    "Coordenadas",
+    "Latitude",
+    "Longitude",
+    "Distrito",
+    "Concelho",
+    "Freguesia",
+    "Altitude (m)",
+    "Bacia Hidrográfica",
+    "Estrutura de nidificação",
+    "Nº ninhos ocupados",
+    "Altura (andares)",
+    "Estado da estrutura",
+    "Local de nidificação",
+    "Comentários",
+    "Multimedia",
+]
+
+FIELD_ORIGIN: dict[str, str] = {
+    "Timestamp": "form",
+    "Nome": "form",
+    "Email": "form",
+    "Nº de registo": "processada",
+    "ID da colónia": "processada",
+    "Data": "form",
+    "Espécie": "form",
+    "Coordenadas": "form",
+    "Latitude": "processada",
+    "Longitude": "processada",
+    "Distrito": "processada",
+    "Concelho": "processada",
+    "Freguesia": "processada",
+    "Altitude (m)": "processada",
+    "Bacia Hidrográfica": "processada",
+    "Estrutura de nidificação": "form",
+    "Nº ninhos ocupados": "form",
+    "Altura (andares)": "form",
+    "Estado da estrutura": "form",
+    "Local de nidificação": "form",
+    "Comentários": "form",
+    "Multimedia": "form",
 }
 
 
@@ -221,6 +299,7 @@ def get_bacias_batch(
 def convert_datatypes(df: pd.DataFrame):
     if not df.empty:
         df["Data"] = pd.to_datetime(df["Data"], errors="coerce")
+        df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors="coerce")
         df["Nº ninhos ocupados"] = df["Nº ninhos ocupados"].astype("Int32")
         df["Altura (andares)"] = df["Altura (andares)"].astype("Int32")
 
@@ -248,7 +327,6 @@ def add_missing_data_col(df: pd.DataFrame, missing_data_col: str = "Dados em Fal
 def full_clean_data(df_raw: pd.DataFrame):
     df = separar_coordenadas(df_raw)
     df = convert_datatypes(df)
-    df = add_code_col(df)
     df = add_missing_data_col(df)
     df = sort_df(df)
 

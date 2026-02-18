@@ -1,9 +1,12 @@
 import gspread
+import numpy as np
 import pandas as pd
 import streamlit as st
 
 from limpeza_de_dados.clean_google_form_data import (
     CONVERSION,
+    DISPLAY_COLUMNS,
+    SAVE_COLUMNS,
     convert_column_names,
     full_clean_data,
 )
@@ -22,6 +25,36 @@ from limpeza_de_dados.create_sidebar import (
     show_selected_row_as_table,
 )
 from limpeza_de_dados.utils import find_new_entries
+
+
+def _infer_colony_id(
+    selected_row: pd.Series,
+    df_validated: pd.DataFrame,
+    lat_col: str,
+    lon_col: str,
+    colony_id_col: str,
+    default_id: int,
+) -> int:
+    """Return existing colony ID if coordinates match, otherwise default_id."""
+    lat = selected_row.get(lat_col)
+    lon = selected_row.get(lon_col)
+
+    if df_validated.empty or pd.isna(lat) or pd.isna(lon):
+        return default_id
+
+    if colony_id_col not in df_validated.columns:
+        return default_id
+
+    matching = df_validated[
+        np.isclose(df_validated[lat_col].astype(float), float(lat), atol=1e-5)
+        & np.isclose(df_validated[lon_col].astype(float), float(lon), atol=1e-5)
+    ]
+
+    if not matching.empty:
+        return int(matching[colony_id_col].iloc[0])
+
+    return default_id
+
 
 DRIVE_INFO: dict[str, str] = get_drive_info()
 GC: gspread.client.Client = gspread.authorize(DRIVE_INFO["creds"])
@@ -92,12 +125,6 @@ def main(
     selected_row = get_submission_to_validate(df_submissions, n_timestamp_col)
 
     # Inicializar variáveis
-    if "continue_showing_results" not in st.session_state:
-        st.session_state["continue_showing_results"] = False
-
-    if "map_selected_point" not in st.session_state:
-        st.session_state["map_selected_point"] = None
-
     if "filtered_df" not in st.session_state:
         st.session_state["filtered_df"] = df_validated
 
@@ -107,30 +134,18 @@ def main(
         else:
             st.session_state["submission_id"] = int(max(df_validated[id_col]) + 1)
 
-    if "new_lat" not in st.session_state:
-        st.session_state["new_lat"] = selected_row[lat_col]
-
-    if "new_lon" not in st.session_state:
-        st.session_state["new_lon"] = selected_row[lon_col]
-
-    if "new_colony_id" not in st.session_state:
-        st.session_state["new_colony_id"] = st.session_state["submission_id"]
-
-    if "timestamp" not in st.session_state:
-        st.session_state["timestamp"] = None
-
-    if st.session_state["timestamp"] == selected_row[n_timestamp_col]:
-        selected_row[lat_col] = st.session_state["new_lat"]
-        selected_row[lon_col] = st.session_state["new_lon"]
-        selected_row[coords_col] = (
-            f"{st.session_state['new_lat']}, {st.session_state['new_lon']}"
-        )
-
     selected_row[id_col] = st.session_state["submission_id"]
-    selected_row[colony_id_col] = st.session_state["new_colony_id"]
+    selected_row[colony_id_col] = _infer_colony_id(
+        selected_row,
+        df_validated,
+        lat_col,
+        lon_col,
+        colony_id_col,
+        default_id=st.session_state["submission_id"],
+    )
 
-    # Reorder selected_row
-    selected_row = selected_row.reindex(list(CONVERSION.values()))
+    # Reorder for display (Altitude/Bacia after Freguesia, no Media)
+    selected_row = selected_row.reindex(DISPLAY_COLUMNS)
 
     st.title("Ferramenta de Validação de Submissões")
 
@@ -142,74 +157,51 @@ def main(
     st.sidebar.markdown("### Filtros")
     filters = create_filter_options()
     filter_params = create_filter_parameters(filters)
-    apply_filters = st.sidebar.button("Aplicar filtros")
 
-    if apply_filters:
-        st.session_state["filtered_df"] = apply_all_filters(
-            df_to_filter=df_validated,
-            selected_row=selected_row,
-            filters=filters,
-            filter_params=filter_params,
-            lat_col=lat_col,
-            lon_col=lon_col,
-            distance_col=distance_col,
-            height_col=height_col,
-            altitude_col=altitude_col,
-            date_col=date_col,
-            species_col=species_col,
-            nest_structure_col=nest_structure_col,
-            bacia_col=bacia_col,
-            email_col=email_col,
-        )
-        # Garantir que os resultados são sempre apresentados
-        st.session_state["continue_showing_results"] = True
-        apply_filters = False
+    st.session_state["filtered_df"] = apply_all_filters(
+        df_to_filter=df_validated,
+        selected_row=selected_row,
+        filters=filters,
+        filter_params=filter_params,
+        lat_col=lat_col,
+        lon_col=lon_col,
+        distance_col=distance_col,
+        height_col=height_col,
+        altitude_col=altitude_col,
+        date_col=date_col,
+        species_col=species_col,
+        nest_structure_col=nest_structure_col,
+        bacia_col=bacia_col,
+        email_col=email_col,
+    )
 
-    if st.session_state["continue_showing_results"]:
-        col1, col2 = st.columns(2)
-        with col1:
-            st.session_state["edited_submission"] = show_selected_row_as_table(
-                selected_row
+    col1, col2 = st.columns(2)
+    with col1:
+        st.session_state["edited_submission"] = show_selected_row_as_table(selected_row)
+    with col2:
+        selected_point = create_full_map(selected_row, st.session_state["filtered_df"])
+        if selected_point and selected_point.get("Grupo") == "Validada":
+            st.markdown(
+                f"**Colónia existente:** ID da colónia = `{selected_point.get(colony_id_col)}` "
+                f"| Coordenadas = `{selected_point.get(lat_col)}, {selected_point.get(lon_col)}`"
             )
-        with col2:
-            st.session_state["map_selected_point"] = create_full_map(
-                selected_row, st.session_state["filtered_df"]
+            st.write(
+                "Modifique coordenadas e ID da colónia na tabela se a observação é a mesma colónia."
             )
-            if st.session_state["map_selected_point"]:
-                update_coords_button = st.button(
-                    label="É a mesma colónia que a submissão?"
-                )
-                st.write(
-                    'As coordenadas serão atualizadas quando clicares "Submeter alterações" ou "Ver alterações"'
-                )
-                if update_coords_button:
-                    st.session_state["new_lat"] = st.session_state[
-                        "map_selected_point"
-                    ][lat_col]
-                    st.session_state["new_lon"] = st.session_state[
-                        "map_selected_point"
-                    ][lon_col]
-                    st.session_state["new_colony_id"] = int(
-                        st.session_state["map_selected_point"][colony_id_col]
-                    )
-                    st.session_state["timestamp"] = selected_row[n_timestamp_col]
 
-        col3, col4 = st.columns(2, gap="small")
-        with col3:
-            preview_button = st.button(label="Ver alterações")
-        with col4:
-            submit_button = st.button(label="Submeter alterações")
+    submit_button = st.button(label="Submeter alterações")
 
-        show_results(st.session_state["filtered_df"])
+    if st.session_state.pop("submit_success", False):
+        st.toast("Submissão validada com sucesso!", icon="✅")
 
-        if preview_button:
-            pass
-
-        if submit_button:
-            data_to_save: list = (
-                st.session_state["edited_submission"].iloc[:, 0].tolist()
-            )
-            data_to_save = [str(item).replace(".", ",") for item in data_to_save]
+    if submit_button:
+        with st.spinner("A guardar submissão..."):
+            edited_series = st.session_state["edited_submission"].iloc[:, 0]
+            save_series = edited_series.reindex(SAVE_COLUMNS)
+            data_to_save: list = [
+                "" if pd.isna(item) else str(item).replace(".", ",")
+                for item in save_series.tolist()
+            ]
             append_row_to_spreadsheet(
                 url=DRIVE_INFO["final_form_spreadsheet_url"],
                 gc=GC,
@@ -217,6 +209,12 @@ def main(
             )
 
             st.session_state["submission_id"] += 1
+            st.session_state["submit_success"] = True
+            load_data_analysis.clear()
+            load_data_submissions.clear()
+        st.rerun()
+
+    show_results(st.session_state["filtered_df"])
 
 
 if __name__ == "__main__":
