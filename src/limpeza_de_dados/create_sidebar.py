@@ -55,6 +55,7 @@ import pandas as pd
 import streamlit as st
 
 from limpeza_de_dados.clean_google_form_data import (
+    FIELD_ORIGIN,
     add_altitude,
     add_bacia_hidrografica,
     add_detailed_location,
@@ -168,12 +169,8 @@ def apply_altitude_filter(filtered_df, selected_row, altitude_col, diff_alt):
 
 def apply_date_filter(filtered_df, selected_row, date_col, diff_d):
     """Apply date difference filter."""
-    filtered_df["date_dt"] = pd.to_datetime(
-        filtered_df[date_col], dayfirst=True, errors="coerce"
-    )
-    selected_date = pd.to_datetime(
-        selected_row[date_col], dayfirst=True, errors="coerce"
-    )
+    filtered_df["date_dt"] = pd.to_datetime(filtered_df[date_col], errors="coerce")
+    selected_date = pd.to_datetime(selected_row[date_col], errors="coerce")
     filtered_df["diff_dias"] = (filtered_df["date_dt"] - selected_date).abs().dt.days
     return filtered_df[filtered_df["diff_dias"] <= diff_d]
 
@@ -292,7 +289,14 @@ def get_submission_to_validate(df_new_submissions: pd.DataFrame, n_timestamp_col
     return selected_row
 
 
-def show_selected_row_as_table(selected_row: pd.Series, height: int = 635):
+def show_selected_row_as_table(selected_row: pd.Series, height: int = 810):
     st.subheader("Submissão seleccionada completa:")
-    edited_submission = st.data_editor(selected_row.to_frame(), height=height)
-    return edited_submission
+    df_display = selected_row.to_frame(name="Valor")
+    df_display.index.name = "Campo"
+    df_display["Origem"] = df_display.index.map(FIELD_ORIGIN).fillna("")
+    edited_submission = st.data_editor(
+        df_display,
+        height=height,
+        disabled=["Origem"],
+    )
+    return edited_submission[["Valor"]]

@@ -41,7 +41,9 @@ def separar_coordenadas(
 def find_new_entries(
     df_raw: pd.DataFrame, df_analysis: pd.DataFrame, unique_col: str = "Timestamp"
 ):
-    return df_raw[~df_raw[unique_col].isin(df_analysis[unique_col])]
+    raw_ts = pd.to_datetime(df_raw[unique_col], errors="coerce")
+    analysis_ts = pd.to_datetime(df_analysis[unique_col], errors="coerce")
+    return df_raw[~raw_ts.isin(analysis_ts)]
 
 
 def salvar_dados_limpos(caminho_arquivo: str, dataframe_limpo: pd.DataFrame) -> None:

@@ -32,13 +32,13 @@ def create_full_map(
     df_validated: pd.DataFrame,
     lat_col: str = "Latitude",
     lon_col: str = "Longitude",
-    code_col: str = "Código",
+    code_col: str = "ID da colónia",
 ):
     selected_row["Grupo"] = "Não validada"
     df_validated["Grupo"] = "Validada"
 
     df = pd.concat([df_validated, selected_row.to_frame().T], ignore_index=True)
-    df[code_col] = df[code_col].fillna("Sem Código")
+    df[code_col] = df[code_col].infer_objects(copy=False).fillna("Sem ID")
 
     df["color"] = df["Grupo"].apply(color_selector)
     df = df.dropna(subset=[lat_col, lon_col])
@@ -78,7 +78,7 @@ def create_full_map(
             initial_view_state=view_state,
             map_style="light",
         ),
-        height=500,
+        height=700,
         on_select=_dummy_callable,
     )
     if e.selection and e.selection.get("objects"):
