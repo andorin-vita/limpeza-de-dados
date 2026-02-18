@@ -293,10 +293,14 @@ def show_selected_row_as_table(selected_row: pd.Series, height: int = 810):
     st.subheader("Submissão seleccionada completa:")
     df_display = selected_row.to_frame(name="Valor")
     df_display.index.name = "Campo"
+    df_display["Valor"] = df_display["Valor"].apply(
+        lambda x: "" if pd.isna(x) else str(x)
+    )
     df_display["Origem"] = df_display.index.map(FIELD_ORIGIN).fillna("")
     edited_submission = st.data_editor(
         df_display,
         height=height,
         disabled=["Origem"],
+        key="submission_editor",
     )
     return edited_submission[["Valor"]]
