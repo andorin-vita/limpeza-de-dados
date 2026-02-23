@@ -106,9 +106,7 @@ SAVE_COLUMNS: list[str] = [
     "Data",
     "Nome",
     "Email",
-    "Origem",
     "Comentários",
-    "Dados em Falta",
     "Timestamp",
     "Multimedia",
     "Ano de Campanha",
@@ -124,6 +122,7 @@ DISPLAY_COLUMNS: list[str] = [
     "Nº de registo",
     "ID da colónia",
     "Data",
+    "Ano de Campanha",
     "Espécie",
     "Coordenadas",
     "Latitude",
@@ -165,6 +164,7 @@ FIELD_ORIGIN: dict[str, str] = {
     "Local de nidificação": "form",
     "Comentários": "form",
     "Multimedia": "form",
+    "Ano de Campanha": "processada",
 }
 
 
@@ -328,6 +328,6 @@ def full_clean_data(df_raw: pd.DataFrame):
     df = separar_coordenadas(df_raw)
     df = convert_datatypes(df)
     df = add_missing_data_col(df)
-    df = sort_df(df)
+    df = sort_df(df, ascending=True)
 
     return df
