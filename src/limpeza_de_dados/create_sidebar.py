@@ -274,7 +274,7 @@ def get_submission_to_validate(df_new_submissions: pd.DataFrame, n_timestamp_col
     )
     display_options, display_to_id = get_sorted_submission_options(df_new_submissions)
     selected_display = st.selectbox(
-        label="Submissões (da mais recente para a mais antiga):",
+        label="Submissões (da mais antiga para a mais recente, por data de observação):",
         options=display_options,
         placeholder="Selecciona a submissão",
     )

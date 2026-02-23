@@ -144,6 +144,10 @@ def main(
         default_id=st.session_state["submission_id"],
     )
 
+    # Derive campaign year from form submission timestamp
+    ts_dt = pd.to_datetime(selected_row.get("Timestamp"), errors="coerce")
+    selected_row["Ano de Campanha"] = ts_dt.year if pd.notna(ts_dt) else None
+
     # Reorder for display (Altitude/Bacia after Freguesia, no Media)
     selected_row = selected_row.reindex(DISPLAY_COLUMNS)
 
