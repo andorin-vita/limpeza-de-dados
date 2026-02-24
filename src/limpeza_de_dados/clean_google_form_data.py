@@ -296,9 +296,15 @@ def get_bacias_batch(
     return df
 
 
+def _parse_date_flexible(series: pd.Series) -> pd.Series:
+    """Parse dates that may use '-' or '/' separators and varying orderings."""
+    normalised = series.astype(str).str.strip().str.replace("/", "-", regex=False)
+    return pd.to_datetime(normalised, dayfirst=False, errors="coerce")
+
+
 def convert_datatypes(df: pd.DataFrame):
     if not df.empty:
-        df["Data"] = pd.to_datetime(df["Data"], errors="coerce")
+        df["Data"] = _parse_date_flexible(df["Data"])
         df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors="coerce")
         df["Nº ninhos ocupados"] = df["Nº ninhos ocupados"].astype("Int32")
         df["Altura (andares)"] = df["Altura (andares)"].astype("Int32")
