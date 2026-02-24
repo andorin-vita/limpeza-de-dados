@@ -27,6 +27,25 @@ def color_selector(grupo, name_group: str = "Não validada"):
     return [0, 128, 255, 180] if grupo == name_group else [255, 0, 80, 180]
 
 
+def _apply_offset_to_overlapping(df: pd.DataFrame, lat_col: str, lon_col: str):
+    """Slightly offset points that share the same coordinates so they're all visible."""
+    offset_deg = 0.00004  # ~4 m at mid-latitudes
+    df = df.copy()
+    df[lat_col] = df[lat_col].astype(float)
+    df[lon_col] = df[lon_col].astype(float)
+
+    grouped = df.groupby([lat_col, lon_col])
+    for (_, _), idx in grouped.groups.items():
+        n = len(idx)
+        if n <= 1:
+            continue
+        angles = np.linspace(0, 2 * np.pi, n, endpoint=False)
+        for i, row_idx in enumerate(idx):
+            df.loc[row_idx, lat_col] += offset_deg * np.cos(angles[i])
+            df.loc[row_idx, lon_col] += offset_deg * np.sin(angles[i])
+    return df
+
+
 def create_full_map(
     selected_row: pd.Series,
     df_validated: pd.DataFrame,
@@ -42,6 +61,7 @@ def create_full_map(
 
     df["color"] = df["Grupo"].apply(color_selector)
     df = df.dropna(subset=[lat_col, lon_col])
+    df = _apply_offset_to_overlapping(df, lat_col, lon_col)
     zoom = 17
 
     selected_lat, selected_lon = selected_row[lat_col], selected_row[lon_col]
