@@ -32,12 +32,14 @@ def _infer_colony_id(
     df_validated: pd.DataFrame,
     lat_col: str,
     lon_col: str,
+    species_col: str,
     colony_id_col: str,
     default_id: int,
 ) -> int:
-    """Return existing colony ID if coordinates match, otherwise default_id."""
+    """Return existing colony ID if coordinates and species match, otherwise default_id."""
     lat = selected_row.get(lat_col)
     lon = selected_row.get(lon_col)
+    species = selected_row.get(species_col)
 
     if df_validated.empty or pd.isna(lat) or pd.isna(lon):
         return default_id
@@ -45,15 +47,34 @@ def _infer_colony_id(
     if colony_id_col not in df_validated.columns:
         return default_id
 
-    matching = df_validated[
-        np.isclose(df_validated[lat_col].astype(float), float(lat), atol=1e-5)
-        & np.isclose(df_validated[lon_col].astype(float), float(lon), atol=1e-5)
-    ]
+    coord_match = np.isclose(
+        df_validated[lat_col].astype(float), float(lat), atol=1e-5
+    ) & np.isclose(df_validated[lon_col].astype(float), float(lon), atol=1e-5)
 
-    if not matching.empty:
-        return int(matching[colony_id_col].iloc[0])
+    matching = df_validated[coord_match]
+
+    if matching.empty:
+        return default_id
+
+    if pd.notna(species) and species_col in df_validated.columns:
+        same_species = matching[matching[species_col] == species]
+        if not same_species.empty:
+            return int(same_species[colony_id_col].iloc[0])
 
     return default_id
+
+
+def _format_for_pt_locale(value) -> str:
+    """Format a value for Portuguese locale: use comma as decimal separator
+    for numeric values, leave text values unchanged."""
+    if pd.isna(value):
+        return ""
+    s = str(value)
+    try:
+        float(s)
+        return s.replace(".", ",")
+    except ValueError:
+        return s
 
 
 DRIVE_INFO: dict[str, str] = get_drive_info()
@@ -140,6 +161,7 @@ def main(
         df_validated,
         lat_col,
         lon_col,
+        species_col,
         colony_id_col,
         default_id=st.session_state["submission_id"],
     )
@@ -147,6 +169,8 @@ def main(
     # Derive campaign year from form submission timestamp
     ts_dt = pd.to_datetime(selected_row.get("Timestamp"), errors="coerce")
     selected_row["Ano de Campanha"] = ts_dt.year if pd.notna(ts_dt) else None
+
+    selected_row["Dados em Falta"] = "Não"
 
     # Reorder for display (Altitude/Bacia after Freguesia, no Media)
     selected_row = selected_row.reindex(DISPLAY_COLUMNS)
@@ -203,8 +227,7 @@ def main(
             edited_series = st.session_state["edited_submission"].iloc[:, 0]
             save_series = edited_series.reindex(SAVE_COLUMNS)
             data_to_save: list = [
-                "" if pd.isna(item) else str(item).replace(".", ",")
-                for item in save_series.tolist()
+                _format_for_pt_locale(item) for item in save_series.tolist()
             ]
             append_row_to_spreadsheet(
                 url=DRIVE_INFO["final_form_spreadsheet_url"],

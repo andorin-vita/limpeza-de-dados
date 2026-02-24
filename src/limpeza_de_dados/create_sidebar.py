@@ -289,7 +289,7 @@ def get_submission_to_validate(df_new_submissions: pd.DataFrame, n_timestamp_col
     return selected_row
 
 
-def show_selected_row_as_table(selected_row: pd.Series, height: int = 810):
+def show_selected_row_as_table(selected_row: pd.Series, height: int = 880):
     st.subheader("Submissão seleccionada completa:")
     df_display = selected_row.to_frame(name="Valor")
     df_display.index.name = "Campo"

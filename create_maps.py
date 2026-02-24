@@ -12,6 +12,7 @@ from limpeza_de_dados.create_data_flow_to_google import (
     get_drive_info,
     read_spreadsheet_as_df,
 )
+from limpeza_de_dados.create_map import _apply_offset_to_overlapping
 
 DESCRIPTION_ABOVE_MAP: str = """"""
 
@@ -40,6 +41,7 @@ COLS_TO_USE: list[str] = [
     "Estado da estrutura",
     "Local de nidificação",
     "Data",
+    "Dados em Falta",
 ]
 
 # Campos para tooltip (coluna → label a mostrar)
@@ -153,6 +155,13 @@ def load_data(
     df = df[available_cols]
     if df.empty:
         return df
+    dados_em_falta_col = "Dados em Falta"
+    if dados_em_falta_col in df.columns:
+        truthy = {"sim", "true", "1", "yes"}
+        df = df[
+            ~df[dados_em_falta_col].astype(str).str.strip().str.lower().isin(truthy)
+        ]
+        df = df.drop(columns=[dados_em_falta_col])
     df = df.dropna(subset=[lat_col, lon_col])
     df = df.sort_values(by=[colony_id_col, date_col], ascending=True)
     df = df.drop_duplicates(subset=[colony_id_col], keep="last")
@@ -302,36 +311,21 @@ def create_map_sidebar(
 
         st.title("Filtros")
 
-        # Placeholder for the legend — will be filled after filtering
-        legend_placeholder = st.empty()
-
         species_selected: str = st.multiselect(
             label="Espécie", options=species_cmap.keys(), key="species-filter"
         )
 
         if int(year[0]) < int(year[-1]):
             years_selected: tuple = st.slider(
-                label="Ano",
+                label="Data da observação",
                 min_value=int(year[0]),
                 max_value=int(year[-1]),
                 value=(int(year[0]), int(year[-1])),
                 key="year_filter",
             )
         else:
-            st.write(f"**Ano:** {int(year[0])}")
+            st.write(f"**Data da observação:** {int(year[0])}")
             years_selected: tuple = (int(year[0]), int(year[0]))
-
-        if int(n_nests[0]) < int(n_nests[-1]):
-            n_nests_selected: tuple = st.slider(
-                label="Nº de ninhos",
-                min_value=int(n_nests[0]),
-                max_value=int(n_nests[-1]),
-                value=(int(n_nests[0]), int(n_nests[-1])),
-                key="nests_filter",
-            )
-        else:
-            st.write(f"**Nº de ninhos:** {int(n_nests[0])}")
-            n_nests_selected: tuple = (int(n_nests[0]), int(n_nests[0]))
 
         # Geographic filters with cascading logic
         districts_selected: list[str] = st.multiselect(
@@ -365,9 +359,16 @@ def create_map_sidebar(
             key="freguesia_filter",
         )
 
-        structure_selected: list[str] = st.multiselect(
-            label="Estrutura", options=nest_structure, key="structure_filter"
-        )
+        # Bacia Hidrográfica filter (only if column exists in data)
+        bacia_selected = []
+        has_bacia = bacia_hid_col in df.columns and df[bacia_hid_col].notna().any()
+        if has_bacia:
+            bacia_options = sorted(df[bacia_hid_col].dropna().unique(), key=unidecode)
+            bacia_selected = st.multiselect(
+                label="Bacia Hidrográfica",
+                options=bacia_options,
+                key="bacia_hid_filter",
+            )
 
         # Altitude filter (only if column exists in data)
         altitude_selected = None
@@ -385,16 +386,23 @@ def create_map_sidebar(
                     key="altitude_filter",
                 )
 
-        # Bacia Hidrográfica filter (only if column exists in data)
-        bacia_selected = []
-        has_bacia = bacia_hid_col in df.columns and df[bacia_hid_col].notna().any()
-        if has_bacia:
-            bacia_options = sorted(df[bacia_hid_col].dropna().unique(), key=unidecode)
-            bacia_selected = st.multiselect(
-                label="Bacia Hidrográfica",
-                options=bacia_options,
-                key="bacia_hid_filter",
+        structure_selected: list[str] = st.multiselect(
+            label="Estrutura de nidificação",
+            options=nest_structure,
+            key="structure_filter",
+        )
+
+        if int(n_nests[0]) < int(n_nests[-1]):
+            n_nests_selected: tuple = st.slider(
+                label="Nº de ninhos",
+                min_value=int(n_nests[0]),
+                max_value=int(n_nests[-1]),
+                value=(int(n_nests[0]), int(n_nests[-1])),
+                key="nests_filter",
             )
+        else:
+            st.write(f"**Nº de ninhos:** {int(n_nests[0])}")
+            n_nests_selected: tuple = (int(n_nests[0]), int(n_nests[0]))
 
         # Apply filters immediately (no submit button needed)
         filtered_df: pd.DataFrame = deepcopy(df)
@@ -454,19 +462,18 @@ def create_map_sidebar(
             .value_counts()
             .sort_index(key=lambda x: x.map(unidecode))
         )
-        with legend_placeholder.container():
-            st.write("**Legenda de Cores:**")
-            for sp_name, count in filtered_species_counts.items():
-                if sp_name in species_cmap:
-                    rgb = species_cmap[sp_name]["rgb"]
-                    hex_color = f"#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
-                    st.markdown(
-                        f'<div style="display: flex; align-items: center; margin-bottom: 5px;">'
-                        f'<div style="width: 20px; height: 20px; background-color: {hex_color}; '
-                        f'border: 1px solid #ccc; margin-right: 10px;"></div>'
-                        f"{sp_name} &nbsp;- {count}</div>",
-                        unsafe_allow_html=True,
-                    )
+        st.write("**Legenda de Cores:**")
+        for sp_name, count in filtered_species_counts.items():
+            if sp_name in species_cmap:
+                rgb = species_cmap[sp_name]["rgb"]
+                hex_color = f"#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
+                st.markdown(
+                    f'<div style="display: flex; align-items: center; margin-bottom: 5px;">'
+                    f'<div style="width: 20px; height: 20px; background-color: {hex_color}; '
+                    f'border: 1px solid #ccc; margin-right: 10px;"></div>'
+                    f"{sp_name} &nbsp;- {count}</div>",
+                    unsafe_allow_html=True,
+                )
 
         return filtered_df
 
@@ -496,13 +503,16 @@ if __name__ == "__main__":
     # Listar regiões
     region_options = load_all_region_options(df, geographies_df)
 
-    # Adicionar colunas para tooltip
+    # Adicionar colunas para tooltip (original coordinates before offset)
     df["Coordenadas"] = (
         df["Latitude"].round(5).astype(str)
         + ", "
         + df["Longitude"].round(5).astype(str)
     )
     df["Data da observação"] = df["Data"].dt.strftime("%Y-%m-%d")
+
+    # Offset overlapping points so all are visible on the map
+    df = _apply_offset_to_overlapping(df, "Latitude", "Longitude")
 
     # Adicionar cores
     color_map = create_cmap_manual()

@@ -112,6 +112,7 @@ SAVE_COLUMNS: list[str] = [
     "Ano de Campanha",
     "Altitude (m)",
     "Bacia Hidrográfica",
+    "Dados em Falta",
     "Validação Manual",
 ]
 
@@ -139,6 +140,7 @@ DISPLAY_COLUMNS: list[str] = [
     "Local de nidificação",
     "Comentários",
     "Multimedia",
+    "Dados em Falta",
 ]
 
 FIELD_ORIGIN: dict[str, str] = {
@@ -165,6 +167,7 @@ FIELD_ORIGIN: dict[str, str] = {
     "Comentários": "form",
     "Multimedia": "form",
     "Ano de Campanha": "processada",
+    "Dados em Falta": "processada",
 }
 
 
@@ -210,23 +213,20 @@ def add_detailed_location(row: pd.Series, geolocator=GEOLOCATOR):
 def add_altitude(row: pd.Series) -> pd.Series:
     """Add altitude (elevation in metres) from the Open-Meteo Elevation API."""
     row["Altitude (m)"] = None
+    lat = row.get("Latitude")
+    lon = row.get("Longitude")
+    if pd.isna(lat) or pd.isna(lon):
+        return row
     try:
-        lat = float(row["Latitude"])
-        lon = float(row["Longitude"])
         response = requests.get(
             OPEN_METEO_ELEVATION_URL,
-            params={"latitude": lat, "longitude": lon},
+            params={"latitude": float(lat), "longitude": float(lon)},
             timeout=10,
         )
         response.raise_for_status()
         row["Altitude (m)"] = response.json()["elevation"][0]
     except Exception:
-        logger.warning(
-            "Could not fetch altitude for (%s, %s)",
-            row.get("Latitude"),
-            row.get("Longitude"),
-            exc_info=True,
-        )
+        logger.warning("Could not fetch altitude for (%s, %s)", lat, lon, exc_info=True)
     return row
 
 

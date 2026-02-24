@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from google.oauth2 import service_account
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
 
-RUN_IN_STREAMLIT: bool = True
+RUN_IN_STREAMLIT: bool = False
 SCOPES = [
     "https://www.googleapis.com/auth/drive",
     "https://www.googleapis.com/auth/spreadsheets",
@@ -71,9 +71,23 @@ def read_spreadsheet_as_df(url: str, gc: gspread.client.Client) -> pd.DataFrame:
     return get_as_dataframe(wh, header=0, evaluate_formulas=False)
 
 
-def append_row_to_spreadsheet(url: str, gc: gspread.client.Client, row_to_append: list):
+def append_row_to_spreadsheet(
+    url: str,
+    gc: gspread.client.Client,
+    row_to_append: list,
+    header_columns: list[str] | None = None,
+):
+    """Append a row to the spreadsheet. If the sheet is empty and header_columns is
+    provided, the header row is written first so the first data row is not mistaken
+    for headers when reading (which would cause column misalignment and null values).
+    """
     sh: gspread.spreadsheet.Spreadsheet = gc.open_by_url(url)
     wh: gspread.worksheet.Worksheet = sh.sheet1
+    all_values = wh.get_all_values()
+
+    if not all_values and header_columns is not None:
+        wh.append_row(header_columns, value_input_option="USER_ENTERED")
+
     wh.append_row(row_to_append, value_input_option="USER_ENTERED")
 
 
