@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from google.oauth2 import service_account
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
 
-RUN_IN_STREAMLIT: bool = False
+RUN_IN_STREAMLIT: bool = True
 SCOPES = [
     "https://www.googleapis.com/auth/drive",
     "https://www.googleapis.com/auth/spreadsheets",
