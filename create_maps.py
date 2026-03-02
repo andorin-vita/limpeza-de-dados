@@ -1,4 +1,5 @@
 from copy import deepcopy
+from datetime import timedelta
 
 import gspread
 import matplotlib.cm as cm
@@ -19,10 +20,11 @@ DESCRIPTION_ABOVE_MAP: str = """"""
 MIN_RADIUS_PIXELS: int = 2
 MAX_RADIUS_PIXELS: int = 10
 ZOOM_RADIUS_PIXELS: int = 500
-HEIGHT: int = 800
-WIDTH: int = 900
+HEIGHT: int = 1025
+WIDTH: int = 1125
 VERTICAL_LEGEND: int = 190
 HORIZONTAL_LEGEND: int = 650
+CACHE_TTL_MINUTES: int = 10
 
 # Campos para os filtros e/ou mapa
 COLS_TO_USE: list[str] = [
@@ -135,7 +137,7 @@ def load_geographies_data(
     return read_spreadsheet_as_df(url=url, gc=_gc)
 
 
-@st.cache_data
+@st.cache_data(ttl=timedelta(minutes=CACHE_TTL_MINUTES))
 def load_data(
     url: str = DRIVE_INFO["final_form_spreadsheet_url"],
     gc: gspread.client.Client = GC,
@@ -185,8 +187,8 @@ def create_point_map(
     lon_col: str = "Longitude",
     color_col: str = "color",
     legend_col: str = "Espécie",
-    center_lat: float = 39.69484,
-    center_lon: float = -8.13031,
+    center_lat: float = 39.3,
+    center_lon: float = -8.0,
     zoom: int = 6,
 ):
 
@@ -481,9 +483,33 @@ def create_map_sidebar(
 if __name__ == "__main__":
     st.set_page_config(layout="wide")
 
-    if st.sidebar.button("🔄 Atualizar dados"):
-        st.cache_data.clear()
-        st.rerun()
+    st.markdown(
+        """
+        <style>
+        .block-container {
+            padding-top: 0rem;
+            padding-bottom: 0rem;
+            padding-left: 0rem;
+            padding-right: 0rem;
+            max-width: 100%;
+        }
+        header {visibility: hidden; height: 0rem;}
+        .appview-container .main .block-container {
+            margin-top: 0rem;
+            padding-top: 0rem;
+        }
+        .stMainBlockContainer {
+            padding-top: 0rem;
+            padding-right: 0rem;
+        }
+        #root > div:first-child {
+            margin-top: 0;
+            padding-top: 0;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
     # === Indica aqui o caminho do teu ficheiro CSV ===
     df: pd.DataFrame = load_data()
