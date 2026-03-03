@@ -55,8 +55,6 @@ COLS_TOOLTIP: dict[str, str] = {
     "Nº ninhos ocupados": "Nº de ninhos",
     "Altura (andares)": "Altura",
     "Estrutura de nidificação": "Estrutura de nidificação",
-    "Local de nidificação": "Local de nidificação",
-    "Estado da estrutura": "Estado da estrutura",
 }
 
 
