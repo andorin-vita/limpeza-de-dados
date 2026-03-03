@@ -92,7 +92,7 @@ def load_data_local(csv_path="data/form_submissions.csv"):
         return pd.DataFrame()  # Return empty DataFrame as fallback
 
 
-@st.cache_data
+@st.cache_data(ttl=30 * 60)
 def load_data_submissions(
     df_analysis: pd.DataFrame,
     url: str = DRIVE_INFO["original_form_spreadsheet_url"],
@@ -104,7 +104,7 @@ def load_data_submissions(
     return full_clean_data(df_raw=df_new_sub)
 
 
-@st.cache_data
+@st.cache_data(ttl=30 * 60)
 def load_data_analysis(
     url: str = DRIVE_INFO["final_form_spreadsheet_url"], gc: gspread.client.Client = GC
 ):
